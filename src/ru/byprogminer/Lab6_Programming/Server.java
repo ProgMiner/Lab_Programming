@@ -57,7 +57,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
 
     @Override
     public void run() {
-        while (Thread.interrupted()) {
+        while (!Thread.interrupted()) {
             try {
                 new Thread(new ClientWorker(receiver.receive())).start();
             } catch (Throwable ignored) {}

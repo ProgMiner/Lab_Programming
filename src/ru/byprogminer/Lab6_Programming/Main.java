@@ -26,7 +26,6 @@ public class Main implements Runnable {
 
     private volatile boolean responseReceived = false;
     private final PacketReceiver receiver;
-    private final SocketAddress address;
 
     public static void main(String[] args) {
         // Check is argument provided
@@ -51,7 +50,7 @@ public class Main implements Runnable {
             final PacketSender sender = PacketSender.by(socket, PART_SIZE);
             final PacketReceiver receiver = PacketReceiver.by(socket, PART_SIZE);
 
-            final Main main = new Main(address, receiver);
+            final Main main = new Main(receiver);
             final Thread receiverThread = new Thread(main);
             receiverThread.start();
 
@@ -67,9 +66,8 @@ public class Main implements Runnable {
         }
     }
 
-    private Main(SocketAddress address, PacketReceiver receiver) {
+    private Main(PacketReceiver receiver) {
         this.receiver = receiver;
-        this.address = address;
     }
 
     @Override

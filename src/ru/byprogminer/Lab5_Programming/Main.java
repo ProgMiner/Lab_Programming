@@ -14,25 +14,24 @@ import static ru.byprogminer.Lab6_Programming.Main.PART_SIZE;
 
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.net.*;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class Main {
 
-    private static final String USAGE = "Usage: java -jar lab6_server.jar <filename>\n" +
+    private static final String USAGE = "Usage: java -jar lab6_server.jar <filename> [port]\n" +
             "  - filename\n" +
-            "    Name of CSV file with LivingObject objects";
+            "    Name of CSV file with LivingObject objects\n" +
+            "  - port\n" +
+            "    Not required port number for opened server";
 
     private final Map<String, String> metadata = Collections.synchronizedMap(new HashMap<>());
     private final Set<LivingObject> livingObjects = Collections.synchronizedSet(new HashSet<>());
     private final NavigableSet<LivingObject> sortedLivingObjects = Collections.synchronizedNavigableSet(new TreeSet<>());
 
-    private String filename;
+    private String filename = null;
 
     public static void main(final String[] args) {
         try {
@@ -70,6 +69,17 @@ public class Main {
         final Main main = new Main();
         main.filename = args[0];
 
+        Short port = null;
+        if (args.length > 1) {
+            try {
+                port = Short.parseShort(args[1]);
+            } catch (Throwable e) {
+                System.err.printf("Bad port provided, %s\n", e.getMessage());
+                System.err.println(USAGE);
+                System.exit(3);
+            }
+        }
+
         final Console console = new Console(CommandRunner.getCommandRunner(main));
 
         // Try to load file
@@ -88,7 +98,11 @@ public class Main {
 
         try {
             DatagramChannel serverChannel = DatagramChannel.open();
-            serverChannel.bind(null);
+            if (port == null) {
+                serverChannel.bind(null);
+            } else {
+                serverChannel.bind(new InetSocketAddress(port));
+            }
 
             Server<DatagramChannel> server = new Server<>(main, serverChannel, PART_SIZE);
             Thread serverThread = new Thread(server);
@@ -129,7 +143,11 @@ public class Main {
 
     private Main() {}
 
-    public List<LivingObject> getLivingObjects() {
+    public List<LivingObject> getLivingObjects() throws FileNotFoundException {
+        try {
+            loadCSV();
+        } catch (Throwable ignored) {}
+
         return livingObjects.parallelStream().collect(Collectors.toList());
     }
 
