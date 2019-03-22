@@ -5,7 +5,11 @@ cd ~/lab6
 mkdir -p bin
 javac18 -cp fastjson.jar -sourcepath src -d bin src/ru/byprogminer/Lab{5,6}_Programming/Main.java
 
-javadoc18 -classpath fastjson.jar -sourcepath src -d doc ru.byprogminer.Lab{3,4,5,6}_Programming
+javadoc18 -classpath fastjson.jar -sourcepath src -d doc \
+    ru.byprogminer.Lab3_Programming \
+    ru.byprogminer.Lab4_Programming \
+    ru.byprogminer.Lab5_Programming{,.csv,.throwing} \
+    ru.byprogminer.Lab6_Programming{,.udp}
 
 rm -r ~/public_html/lab6
 cp -r doc ~/public_html/lab6

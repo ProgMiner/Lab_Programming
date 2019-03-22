@@ -157,6 +157,7 @@ public class Main {
      * Element represents in JSON and must have a 'name' field
      *
      * @param elementString element in JSON
+     * @param console console object
      */
     @CommandHandler(
             usage = "add <element>",
@@ -164,17 +165,16 @@ public class Main {
                     "Element represents in JSON and must have a 'name' field"
     )
     public void add(final String elementString, final Console console) {
-        tryLoadCSV(console);
-
         final LivingObject element = jsonToLivingObject(elementString);
 
+        tryLoadCSV(console);
         if (livingObjects.contains(element)) {
-            console.printWarning("provided element is already contains in collection");
+            console.printWarning("specified element is already contains in collection");
+            return;
         }
 
         livingObjects.add(element);
         sortedLivingObjects.add(element);
-
         trySaveCSV(console);
     }
 
@@ -184,6 +184,7 @@ public class Main {
      * Element represents in JSON and must have a 'name' field
      *
      * @param elementString element in JSON
+     * @param console console object
      */
     @CommandHandler(
             usage = "remove_greater <element>",
@@ -191,28 +192,36 @@ public class Main {
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove_greater(final String elementString, final Console console) {
-        tryLoadCSV(console);
-
         final LivingObject element = jsonToLivingObject(elementString);
 
+        int counter = 0;
         LivingObject greater;
         while (true) {
+            tryLoadCSV(console);
             greater = sortedLivingObjects.higher(element);
 
             if (greater == null) {
                 break;
             }
 
+            ++counter;
             livingObjects.remove(greater);
             sortedLivingObjects.remove(greater);
+            trySaveCSV(console);
         }
 
-        trySaveCSV(console);
+        if (counter == 0) {
+            console.printWarning("no one elements have removed");
+        } else {
+            System.out.printf("%d elements removed", counter);
+        }
     }
 
     /**
      * Usage: <code>show</code><br>
      * Shows all elements in collection
+     *
+     * @param console console object
      */
     @CommandHandler(description = "Shows all elements in collection")
     public void show(final Console console) {
@@ -224,6 +233,8 @@ public class Main {
     /**
      * Usage: <code>ls</code><br>
      * Alias for <code>show</code>
+     *
+     * @param console console object
      */
     @CommandHandler(description = "Alias for `show`")
     public void ls(final Console console) {
@@ -248,6 +259,8 @@ public class Main {
     /**
      * Usage: <code>info</code><br>
      * Prints information about collection
+     *
+     * @param console console object
      */
     @CommandHandler(description = "Prints information about collection")
     public void info(final Console console) {
@@ -265,6 +278,7 @@ public class Main {
      * Element represents in JSON and must have a 'name' field
      *
      * @param elementString element in JSON
+     * @param console console object
      */
     @CommandHandler(
             usage = "remove_lower <element>",
@@ -272,23 +286,29 @@ public class Main {
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove_lower(final String elementString, final Console console) {
-        tryLoadCSV(console);
-
         final LivingObject element = jsonToLivingObject(elementString);
 
+        int counter = 0;
         LivingObject lower;
         while (true) {
+            tryLoadCSV(console);
             lower = sortedLivingObjects.lower(element);
 
             if (lower == null) {
                 break;
             }
 
+            ++counter;
             livingObjects.remove(lower);
             sortedLivingObjects.remove(lower);
+            trySaveCSV(console);
         }
 
-        trySaveCSV(console);
+        if (counter == 0) {
+            console.printWarning("no one elements have removed");
+        } else {
+            System.out.printf("%d elements removed", counter);
+        }
     }
 
     /**
@@ -297,6 +317,7 @@ public class Main {
      * Element represents in JSON and must have a 'name' field
      *
      * @param elementString element in JSON
+     * @param console console object
      */
     @CommandHandler(
             usage = "remove <element>",
@@ -304,13 +325,16 @@ public class Main {
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove(final String elementString, final Console console) {
-        tryLoadCSV(console);
-
         final LivingObject element = jsonToLivingObject(elementString);
+
+        tryLoadCSV(console);
+        if (!livingObjects.contains(element)) {
+            console.printWarning("specified element isn't contains in collection");
+            return;
+        }
 
         livingObjects.remove(element);
         sortedLivingObjects.remove(element);
-
         trySaveCSV(console);
     }
 
@@ -373,6 +397,9 @@ public class Main {
         }
 
         String exception = "an error occurred while csv file reading";
+        final Map<String, String> metadata = Collections.synchronizedMap(new HashMap<>());
+        final Set<LivingObject> livingObjects = Collections.synchronizedSet(new HashSet<>());
+        final NavigableSet<LivingObject> sortedLivingObjects = Collections.synchronizedNavigableSet(new TreeSet<>());
         try {
             final LivingObjectCSVReader reader =
                     new LivingObjectCSVReader(new CSVReaderWithHeader(new CSVReader(new Scanner(file))));
@@ -384,6 +411,13 @@ public class Main {
                 livingObjects.add(object);
                 sortedLivingObjects.add(object);
             }
+
+            this.metadata.clear();
+            this.metadata.putAll(metadata);
+            this.livingObjects.clear();
+            this.livingObjects.addAll(livingObjects);
+            this.sortedLivingObjects.clear();
+            this.sortedLivingObjects.addAll(sortedLivingObjects);
         } catch (Throwable e) {
             if (e.getMessage() != null) {
                 throw new IllegalArgumentException(exception + ", " + e.getMessage(), e);
