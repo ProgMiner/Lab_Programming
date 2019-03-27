@@ -5,10 +5,10 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class ChannelPacketReceiver<S extends DatagramChannel> extends AbstractPacketReceiver<S> implements PacketReceiver {
+public class ChannelPacketReceiver<D extends DatagramChannel> extends AbstractPacketReceiver<D> implements PacketReceiver {
 
-    public ChannelPacketReceiver(S source, int partSize) {
-        super(source, partSize);
+    public ChannelPacketReceiver(D device, int partSize) {
+        super(device, partSize);
     }
 
     @Override
@@ -16,7 +16,7 @@ public class ChannelPacketReceiver<S extends DatagramChannel> extends AbstractPa
         SocketAddress ret;
 
         do {
-            ret = source.receive(buffer);
+            ret = device.receive(buffer);
         } while (ret == null);
 
         return ret;

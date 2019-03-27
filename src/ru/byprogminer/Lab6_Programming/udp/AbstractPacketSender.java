@@ -1,7 +1,5 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
-import ru.byprogminer.Lab6_Programming.Packet;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -9,18 +7,18 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-public abstract class AbstractPacketSender<S> implements PacketSender {
+public abstract class AbstractPacketSender<D> implements PacketSender {
 
-    protected final S source;
+    protected final D device;
     protected final int partSize;
 
-    public AbstractPacketSender(S source, int partSize) {
-        this.source = source;
+    public AbstractPacketSender(D device, int partSize) {
+        this.device = device;
         this.partSize = partSize;
     }
 
     @Override
-    public void send(Packet packet, SocketAddress to) throws IOException {
+    public void send(Object data, SocketAddress to) throws IOException {
         /* Parts structure
          *
          * +-------+-------+----+------+---------+
@@ -38,7 +36,7 @@ public abstract class AbstractPacketSender<S> implements PacketSender {
 
         ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
         ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-        objectStream.writeObject(packet);
+        objectStream.writeObject(data);
         objectStream.close();
 
         final long id = makeId();
@@ -73,7 +71,7 @@ public abstract class AbstractPacketSender<S> implements PacketSender {
 
     protected abstract void sendDatagram(ByteBuffer buffer, SocketAddress to) throws IOException;
 
-    public S getSource() {
-        return source;
+    public D getDevice() {
+        return device;
     }
 }

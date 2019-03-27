@@ -1,6 +1,9 @@
 package ru.byprogminer.Lab5_Programming.csv;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
 
 public class CSVReader implements Iterable<List<String>>, Iterator<List<String>> {
 

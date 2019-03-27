@@ -10,12 +10,12 @@ import java.nio.channels.DatagramChannel;
 
 public interface PacketReceiver {
 
-    static <T extends DatagramSocket> SocketPacketReceiver<T> by(T source, int partSize) {
-        return new SocketPacketReceiver<>(source, partSize);
+    static <T extends DatagramSocket> SocketPacketReceiver<T> by(T device, int partSize) {
+        return new SocketPacketReceiver<>(device, partSize);
     }
 
-    static <T extends DatagramChannel> ChannelPacketReceiver<T> by(T source, int partSize) {
-        return new ChannelPacketReceiver<>(source, partSize);
+    static <T extends DatagramChannel> ChannelPacketReceiver<T> by(T device, int partSize) {
+        return new ChannelPacketReceiver<>(device, partSize);
     }
 
     Pair<Packet, SocketAddress> receive() throws IOException, ClassNotFoundException;

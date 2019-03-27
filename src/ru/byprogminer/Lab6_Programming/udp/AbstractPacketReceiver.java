@@ -7,14 +7,13 @@ import ru.byprogminer.Lab6_Programming.PriorityThing;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-public abstract class AbstractPacketReceiver<S> implements PacketReceiver {
+public abstract class AbstractPacketReceiver<D> implements PacketReceiver {
 
-    protected final S source;
+    protected final D device;
     protected final int partSize;
     protected final Map<SocketAddress, Map<Long, PriorityQueue<PriorityThing<Byte, ByteBuffer>>>> packetsParts = new HashMap<>();
     protected final PriorityQueue<PriorityThing<Long, SocketAddress>> packetAddressesQueue = new PriorityQueue<>();
@@ -22,8 +21,8 @@ public abstract class AbstractPacketReceiver<S> implements PacketReceiver {
     protected final Map<SocketAddress, Map<Long, Long>> packetsSendTime = new HashMap<>();
     protected final Map<SocketAddress, Set<Long>> packetsEndReceived = new HashMap<>();
 
-    public AbstractPacketReceiver(S source, int partSize) {
-        this.source = source;
+    public AbstractPacketReceiver(D device, int partSize) {
+        this.device = device;
         this.partSize = partSize;
     }
 
@@ -141,7 +140,7 @@ public abstract class AbstractPacketReceiver<S> implements PacketReceiver {
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
 
-    public S getSource() {
-        return source;
+    public D getDevice() {
+        return device;
     }
 }

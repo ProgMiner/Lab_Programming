@@ -6,10 +6,10 @@ import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class SocketPacketSender<S extends DatagramSocket> extends AbstractPacketSender<S> implements PacketSender {
+public class SocketPacketSender<D extends DatagramSocket> extends AbstractPacketSender<D> implements PacketSender {
 
-    public SocketPacketSender(S source, int partSize) {
-        super(source, partSize);
+    public SocketPacketSender(D device, int partSize) {
+        super(device, partSize);
     }
 
     @Override
@@ -18,6 +18,6 @@ public class SocketPacketSender<S extends DatagramSocket> extends AbstractPacket
         buffer.get(bufferArray);
 
         DatagramPacket packet = new DatagramPacket(bufferArray, bufferArray.length, to);
-        source.send(packet);
+        device.send(packet);
     }
 }

@@ -8,7 +8,10 @@ import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 public final class LabUtils {
 

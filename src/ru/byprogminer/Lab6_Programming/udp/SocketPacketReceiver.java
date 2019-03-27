@@ -6,10 +6,10 @@ import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class SocketPacketReceiver <S extends DatagramSocket> extends AbstractPacketReceiver<S> implements PacketReceiver {
+public class SocketPacketReceiver <D extends DatagramSocket> extends AbstractPacketReceiver<D> implements PacketReceiver {
 
-    public SocketPacketReceiver(S source, int partSize) {
-        super(source, partSize);
+    public SocketPacketReceiver(D device, int partSize) {
+        super(device, partSize);
     }
 
     @Override
@@ -17,7 +17,7 @@ public class SocketPacketReceiver <S extends DatagramSocket> extends AbstractPac
         byte[] bufferArray = new byte[buffer.remaining()];
 
         DatagramPacket packet = new DatagramPacket(bufferArray, bufferArray.length);
-        source.receive(packet);
+        device.receive(packet);
 
         buffer.put(bufferArray, 0, packet.getLength());
         return packet.getSocketAddress();

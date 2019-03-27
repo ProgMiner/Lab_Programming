@@ -5,14 +5,14 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class ChannelPacketSender<S extends DatagramChannel> extends AbstractPacketSender<S> implements PacketSender {
+public class ChannelPacketSender<D extends DatagramChannel> extends AbstractPacketSender<D> implements PacketSender {
 
-    public ChannelPacketSender(S source, int partSize) {
-        super(source, partSize);
+    public ChannelPacketSender(D device, int partSize) {
+        super(device, partSize);
     }
 
     @Override
     protected void sendDatagram(ByteBuffer buffer, SocketAddress to) throws IOException {
-        source.send(buffer, to);
+        device.send(buffer, to);
     }
 }
