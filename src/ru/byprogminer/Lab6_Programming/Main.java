@@ -4,8 +4,6 @@ import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab3_Programming.Moveable;
 import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab4_Programming.NotFoundException;
-import ru.byprogminer.Lab6_Programming.udp.PacketReceiver;
-import ru.byprogminer.Lab6_Programming.udp.PacketSender;
 
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;

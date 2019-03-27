@@ -2,8 +2,6 @@ package ru.byprogminer.Lab6_Programming;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab5_Programming.Main;
-import ru.byprogminer.Lab6_Programming.udp.PacketReceiver;
-import ru.byprogminer.Lab6_Programming.udp.PacketSender;
 
 import java.io.IOException;
 import java.net.SocketAddress;
