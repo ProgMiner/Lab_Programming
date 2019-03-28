@@ -1,34 +1,64 @@
 package ru.byprogminer.Lab6_Programming;
 
-import ru.byprogminer.Lab3_Programming.LivingObject;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
 
 public abstract class Packet implements Serializable {
 
     public static abstract class Request extends Packet {
 
-        public static final class CurrentState extends Request {}
+        public static final class ConsoleInput extends Request {
+
+            private final byte[] content;
+
+            public ConsoleInput(byte[] content) {
+                this.content = content;
+            }
+
+            public byte[] getContent() {
+                return content;
+            }
+        }
+
+        public static final class ImportFile extends Response {
+
+            private final String filename;
+
+            public ImportFile(String filename) {
+                this.filename = filename;
+            }
+
+            public String getFilename() {
+                return filename;
+            }
+        }
 
         private Request() {}
     }
 
     public static abstract class Response extends Packet {
 
-        public static final class CurrentState extends Response {
+        public static final class ConsoleOutput extends Response {
 
-            private final List<LivingObject> content;
+            private final byte[] content;
 
-            public CurrentState(List<LivingObject> content) {
+            public ConsoleOutput(byte[] content) {
                 this.content = content;
             }
 
-            public List<LivingObject> getContent() {
+            public byte[] getContent() {
+                return content;
+            }
+        }
+
+        public static final class ImportFile extends Response {
+
+            private final byte[] content;
+
+            public ImportFile(byte[] content) {
+                this.content = content;
+            }
+
+            public byte[] getContent() {
                 return content;
             }
         }
@@ -37,12 +67,4 @@ public abstract class Packet implements Serializable {
     }
 
     private Packet() {}
-
-    public ByteBuffer pack() throws IOException {
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-        objectStream.writeObject(this);
-
-        return ByteBuffer.wrap(byteStream.toByteArray());
-    }
 }

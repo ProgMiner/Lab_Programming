@@ -100,7 +100,7 @@ public class Main {
         }
 
         // Delegate control to console
-        System.out.println("Lab6_Programming. Type `help` to get help");
+        console.println("Lab6_Programming. Type `help` to get help");
 
         try {
             DatagramChannel serverChannel = DatagramChannel.open();
@@ -115,12 +115,12 @@ public class Main {
             serverThread.start();
 
             while (serverThread.getState() != Thread.State.RUNNABLE) {
-                System.out.print("");
+                console.print("");
             }
 
             SocketAddress address = serverChannel.getLocalAddress();
             if (address instanceof InetSocketAddress) {
-                System.out.printf("Server opened at local port :%d\n", ((InetSocketAddress) address).getPort());
+                console.printf("Server opened at local port :%d\n", ((InetSocketAddress) address).getPort());
             }
         } catch (Throwable e) {
             System.err.printf("Execution error: an error occurred while server start, %s\n", e.getMessage());

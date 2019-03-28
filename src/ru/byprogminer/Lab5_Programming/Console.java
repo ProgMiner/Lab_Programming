@@ -1,5 +1,7 @@
 package ru.byprogminer.Lab5_Programming;
 
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -9,7 +11,8 @@ import java.util.stream.Stream;
 public class Console {
 
     private final CommandRunner runner;
-    private final Scanner scanner = new Scanner(System.in);
+    private final PrintStream printer;
+    private final Scanner scanner;
 
     private volatile boolean running = false;
 
@@ -53,7 +56,13 @@ public class Console {
     }
 
     public Console(final CommandRunner runner) {
+        this(runner, System.in, System.out);
+    }
+
+    public Console(final CommandRunner runner, final InputStream in, final PrintStream out) {
         this.runner = Objects.requireNonNull(runner);
+        scanner = new Scanner(in);
+        printer = out;
 
         runner.getSpecialParameterTypes().put(Console.class, this);
     }
@@ -66,7 +75,7 @@ public class Console {
         running = true;
         synchronized (scanner) {
             while (running) {
-                System.out.print(translator.get("prompt"));
+                printer.print(translator.get("prompt"));
 
                 if (!scanner.hasNextLine()) {
                     break;
@@ -91,17 +100,17 @@ public class Console {
                         final String usage = runner.getUsage(cpe.getCommandName());
 
                         if (usage != null) {
-                            System.out.printf(translator.get("message.usage"), usage);
+                            printer.printf(translator.get("message.usage"), usage);
                         }
 
                         final Set<String> commands = runner.getCommands();
                         if (commands.contains(cpe.getCommandName())) {
                             if (commands.contains("help")) {
-                                System.out.printf(translator.get("help.try.command"), cpe.getCommandName());
+                                printer.printf(translator.get("help.try.command"), cpe.getCommandName());
                             }
                         } else {
                             if (commands.contains("help")) {
-                                System.out.print(translator.get("help.try"));
+                                printer.print(translator.get("help.try"));
                             }
 
                             checkSpelling(cpe);
@@ -125,7 +134,7 @@ public class Console {
         final Set<String> commands = runner.getCommands();
 
         if (args.length == 0) {
-            System.out.print(translator.get("commands.title.help"));
+            printer.print(translator.get("commands.title.help"));
 
             commands.parallelStream().forEach(command ->
                     printHelpForCommand(command, false));
@@ -142,12 +151,24 @@ public class Console {
         throw new IllegalArgumentException("unknown command " + command);
     }
 
+    public void print(final String msg) {
+        printer.print(msg);
+    }
+
+    public void println(final String msg) {
+        printer.println(msg);
+    }
+
+    public void printf(final String format, final Object... args) {
+        printer.printf(format, (Object[]) args);
+    }
+
     public void printError(final String msg) {
-        System.out.printf(translator.get("message.error"), msg);
+        printf(translator.get("message.error"), msg);
     }
 
     public void printWarning(final String msg) {
-        System.out.printf(translator.get("message.warning"), msg);
+        printf(translator.get("message.warning"), msg);
     }
 
     protected void checkSpelling(final CommandPerformException cpe) {
@@ -204,10 +225,10 @@ public class Console {
             return;
         }
         
-        System.out.print(translator.get("commands.title.spelling"));
+        printer.print(translator.get("commands.title.spelling"));
         commands.forEach((k, strings) ->
                 strings.forEach(command ->
-                        System.out.printf(translator.get("commands.item"), getUsage(command))
+                        printer.printf(translator.get("commands.item"), getUsage(command))
                 )
         );
     }
@@ -218,14 +239,14 @@ public class Console {
         if (single) {
             final String description = runner.getDescription(command);
 
-            System.out.printf(translator.get("message.usage"), usage);
+            printer.printf(translator.get("message.usage"), usage);
             if (description != null) {
-                Stream.of(description.split("\n")).forEach(System.out::println);
+                Stream.of(description.split("\n")).forEach(printer::println);
             } else {
-                System.out.println("Description isn't provided");
+                printer.println("Description isn't provided");
             }
         } else {
-            System.out.printf(translator.get("commands.item"), usage);
+            printer.printf(translator.get("commands.item"), usage);
         }
     }
 

@@ -6,10 +6,8 @@ import sun.plugin.dom.exception.InvalidStateException;
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -55,11 +53,6 @@ public abstract class UDPSocket<D> {
         this.device = device;
     }
 
-    public UDPSocket(D device, int packetSize, SocketAddress remote) {
-        this(device, packetSize);
-        this.remote = remote;
-    }
-
     public synchronized void connect(SocketAddress server) throws IOException {
         if (remote != null) {
             throw new InvalidStateException("socket is already connected");
@@ -67,8 +60,21 @@ public abstract class UDPSocket<D> {
 
         remote = server;
 
+        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE);
+        do {
+            sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
+            remote = receiveDatagram(packet);
+            packet.flip();
+        } while (Action.by(packet.get()) != Action.CONNECT);
+    }
+
+    public synchronized void accept(SocketAddress from) throws IOException {
+        if (remote != null) {
+            throw new InvalidStateException("socket is already connected");
+        }
+
+        remote = from;
         sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
-        remote = receiveDatagram(ByteBuffer.allocate(HEADER_SIZE));
     }
 
     public final void send(Object object) throws IOException {

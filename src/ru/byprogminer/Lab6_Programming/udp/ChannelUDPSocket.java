@@ -13,10 +13,6 @@ public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
         super(device, packetSize);
     }
 
-    public ChannelUDPSocket(D device, int packetSize, SocketAddress remote) {
-        super(device, packetSize, remote);
-    }
-
     @Override
     protected SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException {
         SocketAddress ret;

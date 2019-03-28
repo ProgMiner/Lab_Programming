@@ -1,17 +1,13 @@
 package ru.byprogminer.Lab6_Programming;
 
-import ru.byprogminer.Lab3_Programming.LivingObject;
-import ru.byprogminer.Lab3_Programming.Moveable;
-import ru.byprogminer.Lab3_Programming.Object;
-import ru.byprogminer.Lab4_Programming.NotFoundException;
+import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
 
+import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.*;
-import java.util.stream.Collectors;
 
-public class Main implements Runnable {
+public class Main {
 
     public static final int PART_SIZE = 10240;
     public static final int SEND_INTERVAL = 1000;
@@ -21,9 +17,6 @@ public class Main implements Runnable {
             "    Port number\n" +
             "  - server\n" +
             "    Not required server address";
-
-    private volatile boolean responseReceived = false;
-    private final PacketReceiver receiver;
 
     public static void main(String[] args) {
         // Check is argument provided
@@ -45,105 +38,41 @@ public class Main implements Runnable {
             }
 
             final DatagramSocket socket = new DatagramSocket();
-            final PacketSender sender = PacketSender.by(socket, PART_SIZE);
-            final PacketReceiver receiver = PacketReceiver.by(socket, PART_SIZE);
+            final SocketUDPSocket<DatagramSocket> udpSocket = new SocketUDPSocket<>(socket, PART_SIZE);
+            udpSocket.connect(address);
 
-            final Main main = new Main(receiver);
-            final Thread receiverThread = new Thread(main);
-            receiverThread.start();
+            final Thread outputThread = new Thread(() -> {
+                while (!Thread.interrupted()) {
+                    try {
+                        final Packet packet = udpSocket.receive(Packet.class);
 
-            final Packet packet = new Packet.Request.CurrentState();
-            while (!main.responseReceived) {
-                sender.send(packet, address);
-                Thread.sleep(SEND_INTERVAL);
+                        if (packet instanceof Packet.Response.ConsoleOutput) {
+                            System.out.write(((Packet.Response.ConsoleOutput) packet).getContent());
+                        }
+                    } catch (IOException | ClassNotFoundException ignored) {}
+                }
+            });
+            outputThread.start();
+
+            while (!Thread.interrupted()) {
+                try {
+                    if (System.in.available() == 0) {
+                        Thread.sleep(10);
+                        continue;
+                    }
+
+                    final byte[] content = new byte[System.in.available()];
+                    System.in.read(content);
+
+                    udpSocket.send(new Packet.Request.ConsoleInput(content));
+                } catch (InterruptedException ignored) {}
             }
+
+            System.exit(0);
         } catch (Throwable e) {
             System.err.printf("Execution error: %s\n", e.getMessage());
             System.err.println(USAGE);
             System.exit(2);
-        }
-    }
-
-    private Main(PacketReceiver receiver) {
-        this.receiver = receiver;
-    }
-
-    @Override
-    public void run() {
-        Packet receivedPacket = null;
-
-        do {
-            try {
-                receivedPacket = receiver.receive().getA();
-            } catch (Throwable ignored) {}
-        } while (!(receivedPacket instanceof Packet.Response.CurrentState));
-        responseReceived = true;
-
-        Packet.Response.CurrentState response = (Packet.Response.CurrentState) receivedPacket;
-        generateScript(response.getContent());
-
-        System.exit(0);
-    }
-
-    private void generateScript(List<LivingObject> livingObjects) {
-        if (livingObjects.isEmpty()) {
-            System.out.println("Перекати-поле...");
-            return;
-        }
-
-        Queue<LivingObject> queue = new LinkedList<>(livingObjects);
-        LivingObject skuperfield = queue.remove();
-        if (livingObjects.size() < 2) {
-            if (!skuperfield.getItems().isEmpty()) {
-                System.out.print("Прихватив с собой объекты: ");
-                skuperfield.getItems().parallelStream()
-                        .forEach(object -> System.out.printf("%s, ", object.getName()));
-            }
-
-            skuperfield.moveFrom("огорода", Moveable.Move.GO);
-            return;
-        }
-
-        Random random = new Random();
-        LivingObject security = queue.remove();
-        List<Object> securityItems = new ArrayList<>(security.getItems());
-        for (int i = 0, countI = random.nextInt(3) + 2; i < countI; ++i) {
-            security.moveFor(skuperfield, Moveable.Move.RUN);
-
-            if (!security.getItems().isEmpty()) {
-                security.hit(skuperfield, securityItems.get(random.nextInt(securityItems.size())));
-            }
-
-            skuperfield.moveTo("оврагу", Moveable.Move.RUN);
-
-            if (!skuperfield.getItems().isEmpty()) {
-                int potatoes = skuperfield.getItems().size();
-
-                if (i != countI - 1) {
-                    potatoes = new Random().nextInt(i * skuperfield.getItems().size() / countI + 1) - 1;
-                }
-
-                for (int potato = 0; potato < potatoes; ++potato) {
-                    try {
-                        skuperfield.lose(skuperfield.getItems().iterator().next());
-                    } catch (NotFoundException ignored) {}
-                }
-            }
-        }
-
-        System.out.printf("%s добежал до дна оврага.\n", skuperfield.getName());
-        skuperfield.think("куда пойти, вверх по оврагу или вниз");
-        skuperfield.moveTo("вершине оврага", Moveable.Move.GO);
-
-        if (!queue.isEmpty()) {
-            System.out.print(queue.parallelStream().map(Object::getName)
-                    .collect(Collectors.joining(", ")));
-
-            if (queue.size() == 1) {
-                System.out.println(" молча наблюдал за происходящим.");
-            } else {
-                System.out.println(" молча наблюдали за происходящим.");
-            }
         }
     }
 }

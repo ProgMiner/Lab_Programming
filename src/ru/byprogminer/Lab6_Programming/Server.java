@@ -1,15 +1,16 @@
 package ru.byprogminer.Lab6_Programming;
 
-import ru.byprogminer.Lab3_Programming.LivingObject;
+import ru.byprogminer.Lab5_Programming.CommandRunner;
+import ru.byprogminer.Lab5_Programming.Console;
 import ru.byprogminer.Lab5_Programming.Main;
 import ru.byprogminer.Lab6_Programming.udp.UDPServerSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.net.SocketAddress;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.PrintStream;
 import java.nio.channels.DatagramChannel;
-import java.util.Comparator;
-import java.util.stream.Collectors;
 
 public class Server<C extends DatagramChannel> implements Runnable {
 
@@ -19,15 +20,60 @@ public class Server<C extends DatagramChannel> implements Runnable {
 
     private class ClientWorker implements Runnable {
 
-        private final UDPSocket socket;
+        private final UDPSocket<?> socket;
 
-        public ClientWorker(UDPSocket socket) {
+        public ClientWorker(UDPSocket<?> socket) {
             this.socket = socket;
         }
 
         @Override
         public void run() {
-            // TODO
+            try {
+                final PipedInputStream out = new PipedInputStream();
+                final PipedOutputStream in = new PipedOutputStream();
+                final Console console = new Console(
+                        CommandRunner.getCommandRunner(main),
+                        new PipedInputStream(in),
+                        new PrintStream(new PipedOutputStream(out))
+                );
+
+                new Thread(console::exec).start();
+                while (!Thread.currentThread().isInterrupted() && !console.isRunning());
+                if (Thread.interrupted()) {
+                    return;
+                }
+
+                final Thread outputThread = new Thread(() -> {
+                    while (!Thread.interrupted()) {
+                        try {
+                            if (out.available() == 0) {
+                                Thread.sleep(10);
+                                continue;
+                            }
+
+                            final byte[] content = new byte[out.available()];
+                            out.read(content);
+
+                            socket.send(new Packet.Response.ConsoleOutput(content));
+                        } catch (IOException | InterruptedException ignored) {}
+                    }
+                });
+
+                outputThread.start();
+                while (!Thread.interrupted() && console.isRunning()) {
+                    try {
+                        final Packet packet = socket.receive(Packet.class);
+
+                        if (packet instanceof Packet.Request.ConsoleInput) {
+                            in.write(((Packet.Request.ConsoleInput) packet).getContent());
+                        }
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -42,7 +88,9 @@ public class Server<C extends DatagramChannel> implements Runnable {
         while (!Thread.interrupted()) {
             try {
                 new Thread(new ClientWorker(serverSocket.accept())).start();
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+                ignored.printStackTrace();
+            }
         }
     }
 

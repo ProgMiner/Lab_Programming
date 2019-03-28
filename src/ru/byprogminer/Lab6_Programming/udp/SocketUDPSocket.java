@@ -12,10 +12,6 @@ public class SocketUDPSocket<D extends DatagramSocket> extends UDPSocket<D> {
         super(device, packetSize);
     }
 
-    public SocketUDPSocket(D device, int packetSize, SocketAddress remote) {
-        super(device, packetSize, remote);
-    }
-
     @Override
     protected SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException {
         byte[] bufferArray = new byte[buffer.remaining()];

@@ -32,7 +32,9 @@ public abstract class UDPServerSocket<D> {
         }
 
         final SocketAddress address = clients.remove().getThing();
-        return makeSocket(device, packetSize, address);
+        final UDPSocket<D> socket = makeSocket(device, packetSize);
+        socket.accept(address);
+        return socket;
     }
 
     private synchronized void receivePacket() throws IOException {
@@ -58,5 +60,5 @@ public abstract class UDPServerSocket<D> {
     }
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
-    protected abstract UDPSocket<D> makeSocket(D device, int packetSize, SocketAddress address);
+    protected abstract UDPSocket<D> makeSocket(D device, int packetSize);
 }
