@@ -6,20 +6,25 @@ import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class SocketUDPSocket extends UDPSocket<DatagramSocket> {
+public class SocketUDPSocket<D extends DatagramSocket> extends UDPSocket<D> {
 
-    public SocketUDPSocket(DatagramSocket device, int partSize, SocketAddress remote) {
-        super(device, partSize, remote);
+    public SocketUDPSocket(D device, int packetSize) {
+        super(device, packetSize);
+    }
+
+    public SocketUDPSocket(D device, int packetSize, SocketAddress remote) {
+        super(device, packetSize, remote);
     }
 
     @Override
-    protected ByteBuffer receiveDatagram(int size) throws IOException {
-        byte[] buffer = new byte[size];
+    protected SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException {
+        byte[] bufferArray = new byte[buffer.remaining()];
 
-        DatagramPacket packet = new DatagramPacket(buffer, size);
+        DatagramPacket packet = new DatagramPacket(bufferArray, bufferArray.length);
         device.receive(packet);
 
-        return ByteBuffer.wrap(buffer);
+        buffer.put(bufferArray, 0, packet.getLength());
+        return packet.getSocketAddress();
     }
 
     @Override

@@ -1,12 +1,15 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
 import ru.byprogminer.Lab6_Programming.PriorityThing;
+import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -26,13 +29,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public abstract class UDPSocket<D> {
 
+    public final static int HEADER_SIZE = 3 * Byte.BYTES + 2 * Long.BYTES;
+
     private final static long REPEATING_PERIOD = 1000;
-    private final static int HEADER_SIZE = 3 * Byte.BYTES + 2 * Long.BYTES;
     private final static BigInteger BYTE_MASK = BigInteger.valueOf(0xFF);
 
     // General
-    protected final SocketAddress remote;
-    protected final BigDecimal partSize;
+    protected SocketAddress remote = null;
+    protected final BigDecimal packetSize;
     protected final D device;
 
     // Sending
@@ -46,17 +50,32 @@ public abstract class UDPSocket<D> {
     private final Set<Long> notConfirmedObjects = new HashSet<>();
     private final Set<Long> objectsEndReceived = new HashSet<>();
 
-    public UDPSocket(D device, int partSize, SocketAddress remote) {
-        this.partSize = BigDecimal.valueOf(partSize);
+    public UDPSocket(D device, int packetSize) {
+        this.packetSize = BigDecimal.valueOf(packetSize);
         this.device = device;
+    }
+
+    public UDPSocket(D device, int packetSize, SocketAddress remote) {
+        this(device, packetSize);
         this.remote = remote;
+    }
+
+    public synchronized void connect(SocketAddress server) throws IOException {
+        if (remote != null) {
+            throw new InvalidStateException("socket is already connected");
+        }
+
+        remote = server;
+
+        sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
+        remote = receiveDatagram(ByteBuffer.allocate(HEADER_SIZE));
     }
 
     public final void send(Object object) throws IOException {
         send(object, Action.TRANSPORT, nextId.getAndIncrement());
     }
 
-    public final void sendCaring(Object object) throws IOException {
+    public synchronized final void sendCaring(Object object) throws IOException {
         final long id = nextId.getAndIncrement();
         send(object, Action.CARING_TRANSPORT, id);
 
@@ -82,7 +101,7 @@ public abstract class UDPSocket<D> {
         sendPacket(Action.CONFIRM_CONFIRM, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
     }
 
-    public final <T> T receive(Class<T> clazz) throws IOException, ClassNotFoundException {
+    public final synchronized <T> T receive(Class<T> clazz) throws IOException, ClassNotFoundException {
         final T ret;
 
         while (true) {
@@ -101,14 +120,14 @@ public abstract class UDPSocket<D> {
     }
 
     private void send(Object object, Action action, long id) throws IOException {
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
+        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        final ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
         objectStream.writeObject(object);
         objectStream.close();
 
         final ByteBuffer buffer = ByteBuffer.wrap(byteStream.toByteArray());
         final short count = BigDecimal.valueOf(buffer.remaining())
-                .divide(partSize, BigDecimal.ROUND_CEILING)
+                .divide(packetSize, BigDecimal.ROUND_CEILING)
                 .subtract(BigDecimal.ONE).toBigInteger()
                 .and(BYTE_MASK).shortValue();
         for (int index = 0; index <= count; ++index) {
@@ -117,7 +136,7 @@ public abstract class UDPSocket<D> {
     }
 
     private void sendPacket(Action action, byte index, byte count, long id, ByteBuffer content) throws IOException {
-        ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + partSize.intValue());
+        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
 
         packet.put(action.getCode());
         packet.put(index);
@@ -132,8 +151,9 @@ public abstract class UDPSocket<D> {
         sendDatagram(packet);
     }
 
-    private void receivePacket() throws IOException, ClassNotFoundException {
-        ByteBuffer packet = receiveDatagram(HEADER_SIZE + partSize.intValue());
+    private synchronized void receivePacket() throws IOException, ClassNotFoundException {
+        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
+        receiveDatagram(packet);
 
         if (packet.position() < HEADER_SIZE) {
             return;
@@ -189,10 +209,10 @@ public abstract class UDPSocket<D> {
         }
     }
 
-    private void constructPacket(Long id) throws IOException, ClassNotFoundException {
+    private synchronized void constructPacket(Long id) throws IOException, ClassNotFoundException {
         final PriorityQueue<PriorityThing<Byte, ByteBuffer>> packetParts = packets.remove(id);
 
-        final byte[] buffer = new byte[packetParts.size() * partSize.intValue()];
+        final byte[] buffer = new byte[packetParts.size() * packetSize.intValue()];
         final ByteBuffer packetBuffer = ByteBuffer.wrap(buffer);
         while (!packetParts.isEmpty()) {
             packetBuffer.put(packetParts.remove().getThing());
@@ -206,6 +226,6 @@ public abstract class UDPSocket<D> {
         objects.add(new PriorityThing<>(packetSendTime, object));
     }
 
-    protected abstract ByteBuffer receiveDatagram(int size) throws IOException;
+    protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
     protected abstract void sendDatagram(ByteBuffer content) throws IOException;
 }

@@ -149,7 +149,7 @@ public class Main {
 
     private Main() {}
 
-    public List<LivingObject> getLivingObjects() throws FileNotFoundException {
+    public List<LivingObject> getLivingObjects() {
         try {
             loadCSV();
         } catch (Throwable ignored) {}

@@ -5,16 +5,10 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
+public class ChannelUDPServerSocket<D extends DatagramChannel> extends UDPServerSocket<D> {
 
-    private static final long RECEIVING_DELAY = 100;
-
-    public ChannelUDPSocket(D device, int packetSize) {
+    public ChannelUDPServerSocket(D device, int packetSize) {
         super(device, packetSize);
-    }
-
-    public ChannelUDPSocket(D device, int packetSize, SocketAddress remote) {
-        super(device, packetSize, remote);
     }
 
     @Override
@@ -29,7 +23,7 @@ public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
     }
 
     @Override
-    protected void sendDatagram(ByteBuffer content) throws IOException {
-        device.send(content, remote);
+    protected UDPSocket<D> makeSocket(D device, int packetSize, SocketAddress address) {
+        return new ChannelUDPSocket<>(device, packetSize, address);
     }
 }
