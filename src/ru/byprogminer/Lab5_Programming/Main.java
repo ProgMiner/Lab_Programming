@@ -114,9 +114,7 @@ public class Main {
             Thread serverThread = new Thread(server);
             serverThread.start();
 
-            while (serverThread.getState() != Thread.State.RUNNABLE) {
-                console.print("");
-            }
+            while (serverThread.getState() != Thread.State.RUNNABLE);
 
             SocketAddress address = serverChannel.getLocalAddress();
             if (address instanceof InetSocketAddress) {
@@ -248,6 +246,22 @@ public class Main {
     }
 
     /**
+     * Usage: <code>load</code><br>
+     * Loads collection from file
+     */
+    @CommandHandler(description = "Loads collection from file")
+    public void load() {
+        try {
+            loadCSV();
+
+            System.out.printf("Saved in %s\n", filename);
+        } catch (FileNotFoundException ignored) {
+        } catch (Throwable e) {
+            System.out.printf("Unexpected error: %s\n", e.getMessage());
+        }
+    }
+
+    /**
      * Usage: <code>save</code><br>
      * Saves collection to file
      */
@@ -261,6 +275,10 @@ public class Main {
             System.out.printf("Unexpected error: %s\n", e.getMessage());
         }
     }
+
+//    public void import() {
+//        // TODO
+//    }
 
     /**
      * Usage: <code>info</code><br>

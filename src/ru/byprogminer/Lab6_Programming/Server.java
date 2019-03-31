@@ -38,29 +38,25 @@ public class Server<C extends DatagramChannel> implements Runnable {
                 );
 
                 new Thread(console::exec).start();
-                while (!Thread.currentThread().isInterrupted() && !console.isRunning());
-                if (Thread.interrupted()) {
-                    return;
-                }
+                while (!console.isRunning());
 
                 final Thread outputThread = new Thread(() -> {
-                    while (!Thread.interrupted()) {
+                    while (true) {
                         try {
-                            if (out.available() == 0) {
-                                Thread.sleep(10);
+                            final byte[] buffer = new byte[out.available()];
+                            if (buffer.length == 0) {
+                                Thread.sleep(1);
                                 continue;
                             }
 
-                            final byte[] content = new byte[out.available()];
-                            out.read(content);
-
-                            socket.send(new Packet.Response.ConsoleOutput(content));
+                            final int length = out.read(buffer);
+                            socket.sendCaring(new Packet.Response.ConsoleOutput(buffer));
                         } catch (IOException | InterruptedException ignored) {}
                     }
                 });
 
                 outputThread.start();
-                while (!Thread.interrupted() && console.isRunning()) {
+                while (console.isRunning()) {
                     try {
                         final Packet packet = socket.receive(Packet.class);
 
@@ -85,7 +81,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
 
     @Override
     public void run() {
-        while (!Thread.interrupted()) {
+        while (true) {
             try {
                 new Thread(new ClientWorker(serverSocket.accept())).start();
             } catch (Throwable ignored) {

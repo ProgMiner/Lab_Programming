@@ -26,18 +26,20 @@ public abstract class UDPServerSocket<D> {
         return new ChannelUDPServerSocket<>(device, packetSize);
     }
 
-    public final synchronized UDPSocket<D> accept() throws IOException {
-        while (clients.isEmpty()) {
-            receivePacket();
-        }
+    public final UDPSocket<D> accept() throws IOException {
+        synchronized (clients) {
+            while (clients.isEmpty()) {
+                receivePacket();
+            }
 
-        final SocketAddress address = clients.remove().getThing();
-        final UDPSocket<D> socket = makeSocket(device, packetSize);
-        socket.accept(address);
-        return socket;
+            final SocketAddress address = clients.remove().getThing();
+            final UDPSocket<D> socket = makeSocket(device, packetSize);
+            socket.accept(address);
+            return socket;
+        }
     }
 
-    private synchronized void receivePacket() throws IOException {
+    private void receivePacket() throws IOException {
         final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize);
         final SocketAddress address = receiveDatagram(packet);
 

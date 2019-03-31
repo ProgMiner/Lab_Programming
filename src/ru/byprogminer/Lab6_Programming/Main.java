@@ -6,11 +6,12 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 
 public class Main {
 
     public static final int PART_SIZE = 10240;
-    public static final int SEND_INTERVAL = 1000;
+    public static final int CONNECT_DELAY = 3000;
 
     private static final String USAGE = "Usage: java -jar lab6_client.jar <port> [server]\n" +
             "  - port\n" +
@@ -39,10 +40,22 @@ public class Main {
 
             final DatagramSocket socket = new DatagramSocket();
             final SocketUDPSocket<DatagramSocket> udpSocket = new SocketUDPSocket<>(socket, PART_SIZE);
-            udpSocket.connect(address);
+
+            socket.setSoTimeout(CONNECT_DELAY);
+            while (true) {
+                try {
+                    udpSocket.connect(address);
+                } catch (SocketTimeoutException e) {
+                    System.out.println("Server is unavailable. Retry");
+                    continue;
+                }
+
+                break;
+            }
+            socket.setSoTimeout(0);
 
             final Thread outputThread = new Thread(() -> {
-                while (!Thread.interrupted()) {
+                while (true) {
                     try {
                         final Packet packet = udpSocket.receive(Packet.class);
 
@@ -54,21 +67,22 @@ public class Main {
             });
             outputThread.start();
 
-            while (!Thread.interrupted()) {
+            while (true) {
                 try {
-                    if (System.in.available() == 0) {
-                        Thread.sleep(10);
+                    final int available = System.in.available();
+                    if (available == 0) {
+                        Thread.sleep(1);
                         continue;
                     }
 
-                    final byte[] content = new byte[System.in.available()];
-                    System.in.read(content);
+                    final byte[] buffer = new byte[available];
+                    System.in.read(buffer, 0, available);
 
-                    udpSocket.send(new Packet.Request.ConsoleInput(content));
-                } catch (InterruptedException ignored) {}
+                    udpSocket.sendCaring(new Packet.Request.ConsoleInput(buffer));
+                } catch (Throwable ignored) {}
             }
 
-            System.exit(0);
+            // System.exit(0);
         } catch (Throwable e) {
             System.err.printf("Execution error: %s\n", e.getMessage());
             System.err.println(USAGE);

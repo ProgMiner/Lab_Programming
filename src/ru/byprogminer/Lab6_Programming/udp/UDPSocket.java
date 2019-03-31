@@ -42,11 +42,12 @@ public abstract class UDPSocket<D> {
     private final Set<Long> confirmedObjects = new HashSet<>();
 
     // Receiving
-    private final Map<Long, PriorityQueue<PriorityThing<Byte, ByteBuffer>>> packets = new HashMap<>();
+    private final Map<Long, PriorityQueue<PriorityThing<Byte, ByteBuffer>>> packets = Collections.synchronizedMap(new HashMap<>());
+    private final Map<Long, Long> objectsSendTime = Collections.synchronizedMap(new HashMap<>());
+    private final Set<Long> notConfirmedObjects = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Long> objectsEndReceived = Collections.synchronizedSet(new HashSet<>());
     private final PriorityQueue<PriorityThing<Long, Object>> objects = new PriorityQueue<>();
-    private final Map<Long, Long> objectsSendTime = new HashMap<>();
-    private final Set<Long> notConfirmedObjects = new HashSet<>();
-    private final Set<Long> objectsEndReceived = new HashSet<>();
+    private final Set<Long> receivedObjects = Collections.synchronizedSet(new HashSet<>());
 
     public UDPSocket(D device, int packetSize) {
         this.packetSize = BigDecimal.valueOf(packetSize);
@@ -60,12 +61,17 @@ public abstract class UDPSocket<D> {
 
         remote = server;
 
-        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE);
-        do {
-            sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
-            remote = receiveDatagram(packet);
-            packet.flip();
-        } while (Action.by(packet.get()) != Action.CONNECT);
+        try {
+            final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE);
+            do {
+                sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
+                remote = receiveDatagram(packet);
+                packet.flip();
+            } while (Action.by(packet.get()) != Action.CONNECT);
+        } catch (IOException | RuntimeException | Error e) {
+            remote = null;
+            throw e;
+        }
     }
 
     public synchronized void accept(SocketAddress from) throws IOException {
@@ -81,44 +87,46 @@ public abstract class UDPSocket<D> {
         send(object, Action.TRANSPORT, nextId.getAndIncrement());
     }
 
-    public synchronized final void sendCaring(Object object) throws IOException {
+    public final void sendCaring(Object object) throws IOException {
         final long id = nextId.getAndIncrement();
         send(object, Action.CARING_TRANSPORT, id);
 
         final Thread repeatingThread = new Thread(() -> {
-            while (!Thread.interrupted()) {
+            while (true) {
                 try {
                     Thread.sleep(REPEATING_PERIOD);
                     send(object, Action.REPEAT, id);
-                } catch (InterruptedException ignored) {
-                    break;
-                } catch (IOException ignored) {}
+                } catch (IOException | InterruptedException ignored) {}
             }
         });
 
         repeatingThread.start();
-        while (!confirmedObjects.contains(id)) {
-            try {
-                receivePacket();
-            } catch (ClassNotFoundException ignored) {}
+        synchronized (confirmedObjects) {
+            while (!confirmedObjects.contains(id)) {
+                try {
+                    receivePacket();
+                } catch (ClassNotFoundException ignored) {}
+            }
         }
 
         repeatingThread.interrupt();
         sendPacket(Action.CONFIRM_CONFIRM, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
     }
 
-    public final synchronized <T> T receive(Class<T> clazz) throws IOException, ClassNotFoundException {
+    public final <T> T receive(Class<T> clazz) throws IOException, ClassNotFoundException {
         final T ret;
 
         while (true) {
-            while (objects.isEmpty()) {
-                receivePacket();
-            }
+            synchronized (objects) {
+                while (objects.isEmpty()) {
+                    receivePacket();
+                }
 
-            final Object object = objects.remove().getThing();
-            if (clazz.isInstance(object)) {
-                ret = clazz.cast(object);
-                break;
+                final Object object = objects.remove().getThing();
+                if (clazz.isInstance(object)) {
+                    ret = clazz.cast(object);
+                    break;
+                }
             }
         }
 
@@ -157,7 +165,7 @@ public abstract class UDPSocket<D> {
         sendDatagram(packet);
     }
 
-    private synchronized void receivePacket() throws IOException, ClassNotFoundException {
+    private void receivePacket() throws IOException, ClassNotFoundException {
         final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
         receiveDatagram(packet);
 
@@ -192,6 +200,11 @@ public abstract class UDPSocket<D> {
             return;
         }
 
+        if (action == Action.REPEAT && receivedObjects.contains(id)) {
+            sendPacket(Action.CONFIRM_TRANSPORT, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
+            return;
+        }
+
         if (action == Action.CARING_TRANSPORT) {
             notConfirmedObjects.add(id);
         }
@@ -199,23 +212,25 @@ public abstract class UDPSocket<D> {
         final PriorityQueue<PriorityThing<Byte, ByteBuffer>> objectPackets = packets
                 .computeIfAbsent(id, aLong -> new PriorityQueue<>());
 
-        objectPackets.add(new PriorityThing<>(index, packet));
+        synchronized (objectPackets) {
+            objectPackets.add(new PriorityThing<>(index, packet));
 
-        final Long prevTime = objectsSendTime.put(id, time);
-        if (prevTime != null && prevTime < time) {
-            objectsSendTime.put(id, prevTime);
-        }
+            final Long prevTime = objectsSendTime.put(id, time);
+            if (prevTime != null && prevTime < time) {
+                objectsSendTime.put(id, prevTime);
+            }
 
-        if (index == count) {
-            objectsEndReceived.add(id);
-        }
+            if (index == count) {
+                objectsEndReceived.add(id);
+            }
 
-        if (objectsEndReceived.contains(id) && objectPackets.size() - 1 == count) {
-            constructPacket(id);
+            if (objectsEndReceived.contains(id) && objectPackets.size() - 1 == count) {
+                constructPacket(id);
+            }
         }
     }
 
-    private synchronized void constructPacket(Long id) throws IOException, ClassNotFoundException {
+    private void constructPacket(Long id) throws IOException, ClassNotFoundException {
         final PriorityQueue<PriorityThing<Byte, ByteBuffer>> packetParts = packets.remove(id);
 
         final byte[] buffer = new byte[packetParts.size() * packetSize.intValue()];
@@ -230,6 +245,9 @@ public abstract class UDPSocket<D> {
 
         final Long packetSendTime = objectsSendTime.remove(id);
         objects.add(new PriorityThing<>(packetSendTime, object));
+        receivedObjects.add(id);
+
+        sendPacket(Action.CONFIRM_TRANSPORT, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
     }
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
