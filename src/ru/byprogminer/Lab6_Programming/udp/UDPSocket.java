@@ -1,253 +1,405 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
-import ru.byprogminer.Lab6_Programming.PriorityThing;
 import sun.plugin.dom.exception.InvalidStateException;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.CRC32;
 
 /**
  * Parts structure
  *
- * +--------+-------+-------+----+------+---------+
- * | Action | Index | Count | ID | Time | Content |
- * +--------+-------+-------+----+------+---------+
+ * +------+--------+-------+---------+
+ * | Hash | Action | Count | Content |
+ * +------+--------+-------+---------+
  *
- *   - Action  -  byte  - Action ({@see Action})
- *   - Index   -  byte  - Number of this part
- *   - Count   -  byte  - Count of parts in this packet (decreased by one)
- *   - ID      -  long  - Unique ID of this packet
- *   - Time    -  long  - Sending time of this part
- *   - Content - byte[] - Content of this part
+ *   - Hash     -  long  - Hash of this part without Hash
+ *   - Action   -  byte  - Action ({@see Action})
+ *   - Count    -  byte  - Count of parts in this packet (decreased by one)
+ *   - Content  - byte[] - Content of this part
  */
 public abstract class UDPSocket<D> {
 
-    public final static int HEADER_SIZE = 3 * Byte.BYTES + 2 * Long.BYTES;
+    public final static int HEADER_SIZE = 2 * Byte.BYTES + Long.BYTES;
 
-    private final static long REPEATING_PERIOD = 1000;
+    private class Part {
+
+        private final long hash;
+        private final Action action;
+        private final int count;
+        private final ByteBuffer content;
+
+        public Part(long hash, Action action, int count, ByteBuffer content) {
+            this.hash = hash;
+            this.action = action;
+            this.count = count;
+            this.content = content;
+        }
+    }
+
+    /**
+     * Inner class for receive parts
+     */
+    private class Receiver {
+
+        /**
+         * Received packet
+         */
+        private volatile Object packet = null;
+
+        /**
+         * Received TRANSPORT parts
+         */
+        private volatile ByteBuffer parts = null;
+
+        /**
+         * Hash of last received TRANSPORT part
+         */
+        private final AtomicLong lastReceivedPart = new AtomicLong();
+
+        /**
+         * {@link ScheduledFuture} object of this Receiver
+         */
+        private ScheduledFuture<?> future = null;
+
+        /**
+         * Starts receiver
+         *
+         * @return created {@link ScheduledFuture} object
+         *
+         * @throws InvalidStateException if a receiver is already started
+         */
+        public ScheduledFuture<?> start() {
+            if (future != null) {
+                throw new InvalidStateException("Receiver is already started");
+            }
+
+            return future = Executors.newSingleThreadScheduledExecutor()
+                    .scheduleWithFixedDelay(this::receivePart, 0, 1, TimeUnit.MICROSECONDS);
+        }
+
+        /**
+         * Receives part and processes it
+         *
+         * If received part isn't a part or corrupted, does nothing.
+         *
+         * If part is a CONNECT part and {@link UDPSocket} currently isn't connected, connect it.
+         * If part is a FINISH part, stops receiver.
+         *
+         * If part is a CONFIRM part, removes part with specified in ID field hash from sentParts map.
+         *
+         * Else sends CONFIRM and invokes processTransport method for received part.
+         */
+        private void receivePart() {
+            try {
+                final ByteBuffer partBuffer = ByteBuffer.allocate(HEADER_SIZE + partSize.intValue());
+                final SocketAddress address = receiveDatagram(partBuffer);
+                partBuffer.flip();
+
+                final Part part = parsePart(partBuffer);
+                if (part == null) {
+                    return;
+                }
+
+                switch (part.action) {
+                    case CONNECT:
+                        if (remote == null) {
+                            remote = address;
+                        }
+
+                        return;
+                    case FINISH:
+                        future.cancel(false);
+
+                        return;
+                    case CONFIRM:
+                        if (sentPartHash.get() == part.content.getLong()) {
+                            sentPartReceived.set(true);
+                        }
+
+                        return;
+                }
+
+                final ByteBuffer confirm = ByteBuffer.allocate(Long.BYTES);
+                confirm.putLong(part.hash);
+                confirm.flip();
+                sendPart(Action.CONFIRM, 0, confirm);
+
+                if (lastReceivedPart.get() != part.hash) {
+                    lastReceivedPart.set(part.hash);
+
+                    processTransport(part);
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+
+        /**
+         * Processes TRANSPORT part.
+         *
+         * Puts part to parts, if it is a last part of this packet,
+         * constructs the packet and put it to packet.
+         *
+         * Updates previous to current hash
+         *
+         * @param part part for processing
+         */
+        private void processTransport(Part part) throws IOException, ClassNotFoundException {
+            final ByteBuffer packetBuffer = (parts == null ? (parts = ByteBuffer.allocate(part.count * partSize.intValue())) : parts);
+            packetBuffer.put(part.content);
+
+            if (packetBuffer.remaining() < partSize.intValue()) {
+                parts = null;
+
+                packetBuffer.flip();
+
+                final byte[] packetBytes = new byte[packetBuffer.remaining()];
+                packetBuffer.get(packetBytes);
+
+                final ObjectInputStream objectStream = new ObjectInputStream(new ByteArrayInputStream(packetBytes));
+                final Object packet = objectStream.readObject();
+                objectStream.close();
+
+                this.packet = packet;
+            }
+        }
+    }
+
+    /**
+     * Inner class for send parts
+     */
+    private class Sender {
+
+        /**
+         * Packets to send
+         */
+        private final BlockingQueue<Object> packets = new LinkedBlockingQueue<>();
+
+        /**
+         * {@link ScheduledFuture} object of this Sender
+         */
+        private ScheduledFuture<?> future = null;
+
+        /**
+         * Starts sender
+         *
+         * @return created {@link ScheduledFuture} object
+         *
+         * @throws InvalidStateException if a sender is already started
+         */
+        public ScheduledFuture<?> start() {
+            if (future != null) {
+                throw new InvalidStateException("Sender is already started");
+            }
+
+            return future = Executors.newSingleThreadScheduledExecutor()
+                    .scheduleWithFixedDelay(this::sendPacket, 0, 1, TimeUnit.MICROSECONDS);
+        }
+
+        /**
+         * Sends packet
+         *
+         * If receiver receives a packet, waits for ending of receiving
+         */
+        private void sendPacket() {
+            while (receiver.parts != null) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            try {
+                final Object packet = packets.take();
+
+                final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+                final ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
+                objectStream.writeObject(packet);
+                objectStream.close();
+
+                final ByteBuffer buffer = ByteBuffer.wrap(byteStream.toByteArray());
+                final int count = BigDecimal.valueOf(buffer.remaining())
+                        .divide(partSize, BigDecimal.ROUND_CEILING)
+                        .subtract(BigDecimal.ONE).toBigInteger()
+                        .and(BYTE_MASK).intValue();
+
+                for (int index = 0; index <= count; ++index) {
+                    sendPart(Action.TRANSPORT, count, buffer);
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     private final static BigInteger BYTE_MASK = BigInteger.valueOf(0xFF);
 
     // General
-    protected SocketAddress remote = null;
-    protected final BigDecimal packetSize;
+    protected volatile SocketAddress remote = null;
+    protected final BigDecimal partSize;
     protected final D device;
 
     // Sending
-    private final AtomicLong nextId = new AtomicLong();
-    private final Set<Long> confirmedObjects = new HashSet<>();
+    private final Sender sender = new Sender();
+    private final AtomicLong sentPartHash = new AtomicLong();
+    private final AtomicBoolean sentPartReceived = new AtomicBoolean(true);
 
     // Receiving
-    private final Map<Long, PriorityQueue<PriorityThing<Byte, ByteBuffer>>> packets = Collections.synchronizedMap(new HashMap<>());
-    private final Map<Long, Long> objectsSendTime = Collections.synchronizedMap(new HashMap<>());
-    private final Set<Long> notConfirmedObjects = Collections.synchronizedSet(new HashSet<>());
-    private final Set<Long> objectsEndReceived = Collections.synchronizedSet(new HashSet<>());
-    private final PriorityQueue<PriorityThing<Long, Object>> objects = new PriorityQueue<>();
-    private final Set<Long> receivedObjects = Collections.synchronizedSet(new HashSet<>());
+    private final Receiver receiver = new Receiver();
 
-    public UDPSocket(D device, int packetSize) {
-        this.packetSize = BigDecimal.valueOf(packetSize);
+    /**
+     * Initializes socket and starts receiver thread.
+     *
+     * @param device device for working with datagrams
+     * @param partSize size of content field of parts
+     */
+    public UDPSocket(D device, int partSize) {
+        this.partSize = BigDecimal.valueOf(partSize);
         this.device = device;
+
+        receiver.start();
+        sender.start();
     }
 
-    public synchronized void connect(SocketAddress server) throws IOException {
-        if (remote != null) {
-            throw new InvalidStateException("socket is already connected");
-        }
+    /**
+     * Sends CONNECT part to server.
+     *
+     * @param to server address
+     */
+    public final void connect(SocketAddress to, long timeout) throws IOException {
+        synchronized (this) {
+            if (remote != null) {
+                throw new InvalidStateException("socket is already connected");
+            }
 
-        remote = server;
-
-        try {
-            final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE);
-            do {
-                sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
-                remote = receiveDatagram(packet);
-                packet.flip();
-            } while (Action.by(packet.get()) != Action.CONNECT);
-        } catch (IOException | RuntimeException | Error e) {
+            remote = to;
+            sendPart(Action.CONNECT, 0, ByteBuffer.allocate(0));
             remote = null;
-            throw e;
+        }
+
+        final long start = System.currentTimeMillis();
+        while (remote == null && System.currentTimeMillis() - start < timeout);
+
+        if (remote == null) {
+            throw new SocketTimeoutException("connection timed out");
         }
     }
 
-    public synchronized void accept(SocketAddress from) throws IOException {
+    /**
+     * Sends CONNECT part from server.
+     *
+     * @param from client address
+     */
+    public final synchronized void accept(SocketAddress from) throws IOException {
         if (remote != null) {
             throw new InvalidStateException("socket is already connected");
         }
 
         remote = from;
-        sendPacket(Action.CONNECT, (byte) 0, (byte) 0, 0, ByteBuffer.allocate(0));
+        sendPart(Action.CONNECT, 0, ByteBuffer.allocate(0));
     }
 
-    public final void send(Object object) throws IOException {
-        send(object, Action.TRANSPORT, nextId.getAndIncrement());
+    public final void send(Object packet) throws InterruptedException {
+        sender.packets.put(packet);
     }
 
-    public final void sendCaring(Object object) throws IOException {
-        final long id = nextId.getAndIncrement();
-        send(object, Action.CARING_TRANSPORT, id);
-
-        final Thread repeatingThread = new Thread(() -> {
-            while (true) {
-                try {
-                    Thread.sleep(REPEATING_PERIOD);
-                    send(object, Action.REPEAT, id);
-                } catch (IOException | InterruptedException ignored) {}
-            }
-        });
-
-        repeatingThread.start();
-        synchronized (confirmedObjects) {
-            while (!confirmedObjects.contains(id)) {
-                try {
-                    receivePacket();
-                } catch (ClassNotFoundException ignored) {}
-            }
-        }
-
-        repeatingThread.interrupt();
-        sendPacket(Action.CONFIRM_CONFIRM, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
-    }
-
-    public final <T> T receive(Class<T> clazz) throws IOException, ClassNotFoundException {
+    public final <T> T receive(Class<T> clazz) {
         final T ret;
 
         while (true) {
-            synchronized (objects) {
-                while (objects.isEmpty()) {
-                    receivePacket();
+            while (receiver.packet == null) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+            }
 
-                final Object object = objects.remove().getThing();
-                if (clazz.isInstance(object)) {
-                    ret = clazz.cast(object);
-                    break;
-                }
+            final Object object = receiver.packet;
+            receiver.packet = null;
+
+            if (clazz.isInstance(object)) {
+                ret = clazz.cast(object);
+                break;
             }
         }
 
         return ret;
     }
 
-    private void send(Object object, Action action, long id) throws IOException {
-        final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        final ObjectOutputStream objectStream = new ObjectOutputStream(byteStream);
-        objectStream.writeObject(object);
-        objectStream.close();
+    private synchronized void sendPart(Action action, int count, ByteBuffer content) throws IOException {
+        final ByteBuffer part = ByteBuffer.allocate(HEADER_SIZE + partSize.intValue());
 
-        final ByteBuffer buffer = ByteBuffer.wrap(byteStream.toByteArray());
-        final short count = BigDecimal.valueOf(buffer.remaining())
-                .divide(packetSize, BigDecimal.ROUND_CEILING)
-                .subtract(BigDecimal.ONE).toBigInteger()
-                .and(BYTE_MASK).shortValue();
-        for (int index = 0; index <= count; ++index) {
-            sendPacket(action, (byte) (index & 0xFF), (byte) count, id, buffer);
+        part.putLong(0);
+        part.put(action.getCode());
+        part.put((byte) (count & 0xFF));
+        while (part.hasRemaining() && content.hasRemaining()) {
+            part.put(content.get());
         }
+
+        part.flip();
+        part.getLong();
+        final long hash = crc32(part);
+
+        part.rewind();
+        part.putLong(hash);
+
+        if (action == Action.TRANSPORT) {
+            sentPartReceived.set(false);
+            sentPartHash.set(hash);
+        }
+
+        do {
+            part.rewind();
+            sendDatagram(part);
+
+            if (action == Action.TRANSPORT) {
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } while (action == Action.TRANSPORT && !sentPartReceived.get());
     }
 
-    private void sendPacket(Action action, byte index, byte count, long id, ByteBuffer content) throws IOException {
-        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
+    private static long crc32(ByteBuffer buffer) {
+        final CRC32 crc32 = new CRC32();
+        crc32.update(buffer);
 
-        packet.put(action.getCode());
-        packet.put(index);
-        packet.put(count);
-        packet.putLong(id);
-        packet.putLong(System.currentTimeMillis());
-        while (packet.hasRemaining() && content.hasRemaining()) {
-            packet.put(content.get());
-        }
-
-        packet.flip();
-        sendDatagram(packet);
+        return crc32.getValue();
     }
 
-    private void receivePacket() throws IOException, ClassNotFoundException {
-        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
-        receiveDatagram(packet);
-
-        if (packet.position() < HEADER_SIZE) {
-            return;
+    private Part parsePart(ByteBuffer part) {
+        if (part.limit() < HEADER_SIZE) {
+            return null;
         }
 
-        packet.flip();
-        final Action action = Action.by(packet.get());
-        final byte index = packet.get();
-        final byte count = packet.get();
-        final Long id = packet.getLong();
-        final Long time = packet.getLong();
-        packet.compact();
-        packet.flip();
+        final long hash = part.getLong();
+        part.compact();
+        part.flip();
 
-        if (action == Action.CONNECT) {
-            return;
+        final long realHash = crc32(part);
+        if (hash != realHash) {
+            return null;
         }
 
-        if (action == Action.CONFIRM_CONFIRM) {
-            notConfirmedObjects.remove(id);
-            return;
-        }
+        part.rewind();
+        final Action action = Action.by(part.get());
+        final byte count = part.get();
+        part.compact();
+        part.flip();
 
-        if (action == Action.CONFIRM_TRANSPORT) {
-            confirmedObjects.add(id);
-            return;
-        }
-
-        if (action == Action.REPEAT && !notConfirmedObjects.contains(id)) {
-            return;
-        }
-
-        if (action == Action.REPEAT && receivedObjects.contains(id)) {
-            sendPacket(Action.CONFIRM_TRANSPORT, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
-            return;
-        }
-
-        if (action == Action.CARING_TRANSPORT) {
-            notConfirmedObjects.add(id);
-        }
-
-        final PriorityQueue<PriorityThing<Byte, ByteBuffer>> objectPackets = packets
-                .computeIfAbsent(id, aLong -> new PriorityQueue<>());
-
-        synchronized (objectPackets) {
-            objectPackets.add(new PriorityThing<>(index, packet));
-
-            final Long prevTime = objectsSendTime.put(id, time);
-            if (prevTime != null && prevTime < time) {
-                objectsSendTime.put(id, prevTime);
-            }
-
-            if (index == count) {
-                objectsEndReceived.add(id);
-            }
-
-            if (objectsEndReceived.contains(id) && objectPackets.size() - 1 == count) {
-                constructPacket(id);
-            }
-        }
-    }
-
-    private void constructPacket(Long id) throws IOException, ClassNotFoundException {
-        final PriorityQueue<PriorityThing<Byte, ByteBuffer>> packetParts = packets.remove(id);
-
-        final byte[] buffer = new byte[packetParts.size() * packetSize.intValue()];
-        final ByteBuffer packetBuffer = ByteBuffer.wrap(buffer);
-        while (!packetParts.isEmpty()) {
-            packetBuffer.put(packetParts.remove().getThing());
-        }
-
-        ObjectInputStream objectStream = new ObjectInputStream(new ByteArrayInputStream(buffer, 0, packetBuffer.position()));
-        Object object = objectStream.readObject();
-        objectStream.close();
-
-        final Long packetSendTime = objectsSendTime.remove(id);
-        objects.add(new PriorityThing<>(packetSendTime, object));
-        receivedObjects.add(id);
-
-        sendPacket(Action.CONFIRM_TRANSPORT, (byte) 0, (byte) 0, id, ByteBuffer.allocate(0));
+        return new Part(hash, action, count + 1, part);
     }
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;

@@ -1,12 +1,11 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
-import ru.byprogminer.Lab6_Programming.PriorityThing;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
-import java.util.PriorityQueue;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import static ru.byprogminer.Lab6_Programming.udp.UDPSocket.HEADER_SIZE;
 
@@ -15,7 +14,7 @@ public abstract class UDPServerSocket<D> {
     protected final int packetSize;
     protected final D device;
 
-    private final PriorityQueue<PriorityThing<Long, SocketAddress>> clients = new PriorityQueue<>();
+    private final Queue<SocketAddress> clients = new LinkedList<>();
 
     public UDPServerSocket(D device, int packetSize) {
         this.packetSize = packetSize;
@@ -32,7 +31,7 @@ public abstract class UDPServerSocket<D> {
                 receivePacket();
             }
 
-            final SocketAddress address = clients.remove().getThing();
+            final SocketAddress address = clients.remove();
             final UDPSocket<D> socket = makeSocket(device, packetSize);
             socket.accept(address);
             return socket;
@@ -50,15 +49,13 @@ public abstract class UDPServerSocket<D> {
         packet.flip();
         final Action action = Action.by(packet.get());
         packet.get();
-        packet.get();
         packet.getLong();
-        final Long time = packet.getLong();
 
         if (action != Action.CONNECT) {
             return;
         }
 
-        clients.add(new PriorityThing<>(time, address));
+        clients.add(address);
     }
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;

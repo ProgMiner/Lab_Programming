@@ -49,22 +49,20 @@ public class Server<C extends DatagramChannel> implements Runnable {
                                 continue;
                             }
 
-                            final int length = out.read(buffer);
-                            socket.sendCaring(new Packet.Response.ConsoleOutput(buffer));
-                        } catch (IOException | InterruptedException ignored) {}
+                            out.read(buffer);
+                            socket.send(new Packet.Response.ConsoleOutput(buffer));
+                        } catch (IOException | InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 });
 
                 outputThread.start();
                 while (console.isRunning()) {
-                    try {
-                        final Packet packet = socket.receive(Packet.class);
+                    final Packet packet = socket.receive(Packet.class);
 
-                        if (packet instanceof Packet.Request.ConsoleInput) {
-                            in.write(((Packet.Request.ConsoleInput) packet).getContent());
-                        }
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
+                    if (packet instanceof Packet.Request.ConsoleInput) {
+                        in.write(((Packet.Request.ConsoleInput) packet).getContent());
                     }
                 }
             } catch (IOException e) {
@@ -84,8 +82,8 @@ public class Server<C extends DatagramChannel> implements Runnable {
         while (true) {
             try {
                 new Thread(new ClientWorker(serverSocket.accept())).start();
-            } catch (Throwable ignored) {
-                ignored.printStackTrace();
+            } catch (Throwable e) {
+                e.printStackTrace();
             }
         }
     }

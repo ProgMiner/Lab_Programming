@@ -7,8 +7,6 @@ import java.nio.channels.DatagramChannel;
 
 public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
 
-    private static final long RECEIVING_DELAY = 100;
-
     public ChannelUDPSocket(D device, int packetSize) {
         super(device, packetSize);
     }
@@ -17,10 +15,7 @@ public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
     protected SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException {
         SocketAddress ret;
 
-        do {
-            ret = device.receive(buffer);
-        } while (ret == null);
-
+        while ((ret = device.receive(buffer)) == null);
         return ret;
     }
 
