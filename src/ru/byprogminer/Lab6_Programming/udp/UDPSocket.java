@@ -7,17 +7,18 @@ import java.math.BigDecimal;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CRC32;
 
 /**
  * Parts structure
  *
- * +------+--------+-------+---------+
- * | Hash | Action | Count | Content |
- * +------+--------+-------+---------+
+ * +--------+----------+-------+---------+
+ * | Action | Previous | Count | Content |
+ * +--------+----------+-------+---------+
  *
- *   - Hash     -  long  - Hash of this part without Hash
  *   - Action   -  byte  - Action ({@see Action})
+ *   - Previous -  long  - Hash of the previous sent part
  *   - Count    -  byte  - Count of parts in this packet (decreased by one)
  *   - Content  - byte[] - Content of this part
  */
@@ -74,6 +75,7 @@ public abstract class UDPSocket<D> {
 
     // Sending
     // TODO
+    private final AtomicLong previous = new AtomicLong();
 
     // Receiving
     private final Receiver receiver = new Receiver();
@@ -109,10 +111,30 @@ public abstract class UDPSocket<D> {
         // TODO
     }
 
-    public final void send(Object packet) throws InterruptedException {
+    /**
+     * Sends object to remote host
+     *
+     * @param object object to send
+     *
+     * @throws IllegalStateException if socket isn't connected
+     */
+    public final void send(Object object) {
+        if (remote == null) {
+            throw new IllegalStateException("socket isn't connected");
+        }
+
         // TODO
     }
 
+    /**
+     * Receives object
+     *
+     * @param <T> type of object
+     *
+     * @param clazz class of type of object
+     *
+     * @return object
+     */
     public final <T> T receive(Class<T> clazz) {
         final T ret;
 
@@ -128,8 +150,18 @@ public abstract class UDPSocket<D> {
         return ret;
     }
 
-    private synchronized void sendPart(Action action, int count, ByteBuffer content) throws IOException {
-        // TODO
+    private ByteBuffer makePart(Action action, int count, ByteBuffer content) {
+        final ByteBuffer part = ByteBuffer.allocate(HEADER_SIZE + Math.min(partSize.intValue(), content.remaining()));
+
+        part.put(action.getCode());
+        part.putLong(previous.get());
+        part.put((byte) (count & 0xFF));
+        while (part.hasRemaining() && content.hasRemaining()) {
+            part.put(content);
+        }
+
+        part.flip();
+        return part;
     }
 
     private static long crc32(ByteBuffer buffer) {
