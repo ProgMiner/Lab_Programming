@@ -36,6 +36,11 @@ public abstract class UDPSocket<D> {
         private ScheduledFuture<?> future = null;
 
         /**
+         * Blocking queue of received objects
+         */
+        private final BlockingQueue<Object> receivedObjects = new LinkedBlockingQueue<>();
+
+        /**
          * Starts receiver
          *
          * @return created {@link ScheduledFuture} object
@@ -161,19 +166,14 @@ public abstract class UDPSocket<D> {
      *
      * @return object
      */
-    public final <T> T receive(Class<T> clazz) {
-        final T ret;
-
+    public final <T> T receive(Class<T> clazz) throws InterruptedException {
         while (true) {
-            // TODO
+            final Object object = receiver.receivedObjects.take();
 
             if (clazz.isInstance(object)) {
-                ret = clazz.cast(object);
-                break;
+                return clazz.cast(object);
             }
         }
-
-        return ret;
     }
 
     private ByteBuffer makePacket(Action action, int count, ByteBuffer content) {
