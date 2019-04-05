@@ -45,13 +45,13 @@ public class Server<C extends DatagramChannel> implements Runnable {
                         try {
                             final byte[] buffer = new byte[out.available()];
                             if (buffer.length == 0) {
-                                Thread.sleep(1);
+                                Thread.yield();
                                 continue;
                             }
 
                             out.read(buffer);
                             socket.send(new Packet.Response.ConsoleOutput(buffer));
-                        } catch (IOException | InterruptedException e) {
+                        } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }

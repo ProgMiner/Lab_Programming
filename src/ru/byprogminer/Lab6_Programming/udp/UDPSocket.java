@@ -1,10 +1,9 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
-import sun.plugin.dom.exception.InvalidStateException;
-
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,11 +40,11 @@ public abstract class UDPSocket<D> {
          *
          * @return created {@link ScheduledFuture} object
          *
-         * @throws InvalidStateException if a receiver is already started
+         * @throws IllegalStateException if a receiver is already started
          */
         public ScheduledFuture<?> start() {
             if (future != null) {
-                throw new InvalidStateException("Receiver is already started");
+                throw new IllegalStateException("Receiver is already started");
             }
 
             return future = Executors.newSingleThreadScheduledExecutor()
@@ -81,7 +80,7 @@ public abstract class UDPSocket<D> {
     private final Receiver receiver = new Receiver();
 
     /**
-     * Initializes socket and starts receiver thread.
+     * Initializes socket and starts receiver thread
      *
      * @param device device for working with datagrams
      * @param packetSize size of content field of packets
@@ -94,21 +93,48 @@ public abstract class UDPSocket<D> {
     }
 
     /**
-     * Sends CONNECT packet to server.
+     * Sends CONNECT packet to server
      *
      * @param to server address
+     *
+     * @throws IllegalStateException if socket is connected
+     * @throws SocketTimeoutException if connection timed out
      */
     public final void connect(SocketAddress to, long timeout) throws IOException {
-        // TODO
+        synchronized (this) {
+            if (remote != null) {
+                throw new IllegalStateException("socket is connected already");
+            }
+
+            remote = to;
+            sendDatagram(makePacket(Action.CONNECT, 0, ByteBuffer.allocate(0)));
+            remote = null;
+        }
+
+        final long start = System.currentTimeMillis();
+        while (remote == null && System.currentTimeMillis() - start < timeout) {
+            Thread.yield();
+        }
+
+        if (remote == null) {
+            throw new SocketTimeoutException("connection timed out");
+        }
     }
 
     /**
-     * Sends CONNECT packet from server.
+     * Sends CONNECT packet from server
      *
      * @param from client address
+     *
+     * @throws IllegalStateException if socket is connected
      */
     public final synchronized void accept(SocketAddress from) throws IOException {
-        // TODO
+        if (remote != null) {
+            throw new IllegalStateException("socket is connected already");
+        }
+
+        remote = from;
+        sendDatagram(makePacket(Action.CONNECT, 0, ByteBuffer.allocate(0)));
     }
 
     /**

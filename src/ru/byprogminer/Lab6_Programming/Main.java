@@ -74,7 +74,7 @@ public class Main {
                 try {
                     final int available = System.in.available();
                     if (available == 0) {
-                        Thread.sleep(1);
+                        Thread.yield();
                         continue;
                     }
 
@@ -82,7 +82,7 @@ public class Main {
                     System.in.read(buffer, 0, available);
 
                     udpSocket.send(new Packet.Request.ConsoleInput(buffer));
-                } catch (Throwable e) {
+                } catch (IOException e) {
                     if (System.in.read() == -1) {
                         System.exit(0);
                     }
