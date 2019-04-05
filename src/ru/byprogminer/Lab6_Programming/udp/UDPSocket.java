@@ -11,23 +11,23 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CRC32;
 
 /**
- * Parts structure
+ * Packets structure
  *
  * +--------+----------+-------+---------+
  * | Action | Previous | Count | Content |
  * +--------+----------+-------+---------+
  *
  *   - Action   -  byte  - Action ({@see Action})
- *   - Previous -  long  - Hash of the previous sent part
- *   - Count    -  byte  - Count of parts in this packet (decreased by one)
- *   - Content  - byte[] - Content of this part
+ *   - Previous -  long  - Hash of the previous sent packet
+ *   - Count    -  byte  - Count of packets in this object (decreased by one)
+ *   - Content  - byte[] - Content of this packet
  */
 public abstract class UDPSocket<D> {
 
     public final static int HEADER_SIZE = 2 * Byte.BYTES + Long.BYTES;
 
     /**
-     * Inner class for receive parts
+     * Inner class for receive packets
      */
     private class Receiver {
 
@@ -54,23 +54,23 @@ public abstract class UDPSocket<D> {
 
         private void tick() {
             try {
-                receivePart();
+                receivePacket();
             } catch (Throwable e) {
                 e.printStackTrace();
             }
         }
 
         /**
-         * Receives part and processes it
+         * Receives packet and processes it
          */
-        private void receivePart() {
+        private void receivePacket() {
             // TODO
         }
     }
 
     // General
     protected volatile SocketAddress remote = null;
-    protected final BigDecimal partSize;
+    protected final BigDecimal packetSize;
     protected final D device;
 
     // Sending
@@ -84,17 +84,17 @@ public abstract class UDPSocket<D> {
      * Initializes socket and starts receiver thread.
      *
      * @param device device for working with datagrams
-     * @param partSize size of content field of parts
+     * @param packetSize size of content field of packets
      */
-    public UDPSocket(D device, int partSize) {
-        this.partSize = BigDecimal.valueOf(partSize);
+    public UDPSocket(D device, int packetSize) {
+        this.packetSize = BigDecimal.valueOf(packetSize);
         this.device = device;
 
         receiver.start();
     }
 
     /**
-     * Sends CONNECT part to server.
+     * Sends CONNECT packet to server.
      *
      * @param to server address
      */
@@ -103,7 +103,7 @@ public abstract class UDPSocket<D> {
     }
 
     /**
-     * Sends CONNECT part from server.
+     * Sends CONNECT packet from server.
      *
      * @param from client address
      */
@@ -118,7 +118,7 @@ public abstract class UDPSocket<D> {
      *
      * @throws IllegalStateException if socket isn't connected
      */
-    public final void send(Object object) {
+    public final void send(Object object) throws IOException {
         if (remote == null) {
             throw new IllegalStateException("socket isn't connected");
         }
@@ -150,18 +150,18 @@ public abstract class UDPSocket<D> {
         return ret;
     }
 
-    private ByteBuffer makePart(Action action, int count, ByteBuffer content) {
-        final ByteBuffer part = ByteBuffer.allocate(HEADER_SIZE + Math.min(partSize.intValue(), content.remaining()));
+    private ByteBuffer makePacket(Action action, int count, ByteBuffer content) {
+        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + Math.min(packetSize.intValue(), content.remaining()));
 
-        part.put(action.getCode());
-        part.putLong(previous.get());
-        part.put((byte) (count & 0xFF));
-        while (part.hasRemaining() && content.hasRemaining()) {
-            part.put(content);
+        packet.put(action.getCode());
+        packet.putLong(previous.get());
+        packet.put((byte) (count & 0xFF));
+        while (packet.hasRemaining() && content.hasRemaining()) {
+            packet.put(content);
         }
 
-        part.flip();
-        return part;
+        packet.flip();
+        return packet;
     }
 
     private static long crc32(ByteBuffer buffer) {
