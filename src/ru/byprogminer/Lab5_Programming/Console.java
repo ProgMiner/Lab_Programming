@@ -16,10 +16,10 @@ public class Console {
 
     private volatile boolean running = false;
 
-    private long maxMistakeCount = 3;
+    private volatile long maxMistakeCount = 3;
 
     @SuppressWarnings("unchecked")
-    private Map<String, String> translator =
+    private final Map<String, String> translator =
             (Map<String, String>) Proxy.newProxyInstance(
                     HashMap.class.getClassLoader(),
                     HashMap.class.getInterfaces(),

@@ -8,11 +8,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public abstract class LivingObject extends Object implements Hitter, Picker, Moveable, Thinkable, Comparable<LivingObject> {
+public abstract class LivingObject extends Object implements Hitter, Picker, Movable, Thinkable, Comparable<LivingObject> {
 
-    private Set<Object> items = new HashSet<>();
+    private final Set<Object> items = new HashSet<>();
 
-    private boolean lives = true;
+    private volatile boolean lives = true;
 
     public LivingObject(
             final String name,

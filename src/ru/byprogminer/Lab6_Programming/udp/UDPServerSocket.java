@@ -41,17 +41,13 @@ public abstract class UDPServerSocket<D> {
     private void receivePacket() throws IOException {
         final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + packetSize);
         final SocketAddress address = receiveDatagram(packet);
+        packet.flip();
 
-        if (packet.position() < HEADER_SIZE) {
+        if (packet.remaining() < HEADER_SIZE || packet.getInt() != UDPSocket.SIGNATURE) {
             return;
         }
 
-        packet.flip();
-        final Action action = Action.by(packet.get());
-        packet.get();
-        packet.getLong();
-
-        if (action != Action.CONNECT) {
+        if (Action.by(packet.get()) != Action.CONNECT) {
             return;
         }
 

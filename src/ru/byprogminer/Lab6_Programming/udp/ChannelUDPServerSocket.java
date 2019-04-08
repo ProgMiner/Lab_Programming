@@ -15,7 +15,10 @@ public class ChannelUDPServerSocket<D extends DatagramChannel> extends UDPServer
     protected SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException {
         SocketAddress ret;
 
-        while ((ret = device.receive(buffer)) == null);
+        while ((ret = device.receive(buffer)) == null) {
+            Thread.yield();
+        }
+
         return ret;
     }
 

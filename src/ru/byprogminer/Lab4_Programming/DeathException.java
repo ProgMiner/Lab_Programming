@@ -7,7 +7,7 @@ import java.util.Objects;
 
 public class DeathException extends RuntimeException {
 
-    private LivingObject diedObject;
+    private final LivingObject diedObject;
 
     public DeathException(LivingObject diedObject) {
         this.diedObject = Objects.requireNonNull(diedObject);

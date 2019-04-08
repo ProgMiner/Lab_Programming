@@ -110,11 +110,13 @@ public class Main {
                 serverChannel.bind(new InetSocketAddress(port));
             }
 
-            Server<DatagramChannel> server = new Server<>(main, serverChannel, PART_SIZE);
-            Thread serverThread = new Thread(server);
+            final Server<DatagramChannel> server = new Server<>(main, serverChannel, PART_SIZE);
+            final Thread serverThread = new Thread(server);
             serverThread.start();
 
-            while (serverThread.getState() != Thread.State.RUNNABLE);
+            while (serverThread.getState() != Thread.State.RUNNABLE) {
+                Thread.yield();
+            }
 
             SocketAddress address = serverChannel.getLocalAddress();
             if (address instanceof InetSocketAddress) {
@@ -217,7 +219,7 @@ public class Main {
         if (counter == 0) {
             console.printWarning("no one elements have removed");
         } else {
-            System.out.printf("%d elements removed", counter);
+            console.printf("%d elements removed", counter);
         }
     }
 
@@ -231,7 +233,9 @@ public class Main {
     public void show(final Console console) {
         tryLoadCSV(console);
 
-        livingObjects.parallelStream().forEach(System.out::println);
+        livingObjects.parallelStream()
+                .map(LivingObject::toString)
+                .forEach(console::println);
     }
 
     /**
@@ -250,14 +254,14 @@ public class Main {
      * Loads collection from file
      */
     @CommandHandler(description = "Loads collection from file")
-    public void load() {
+    public void load(final Console console) {
         try {
             loadCSV();
 
-            System.out.printf("Saved in %s\n", filename);
+            console.printf("Saved in %s\n", filename);
         } catch (FileNotFoundException ignored) {
         } catch (Throwable e) {
-            System.out.printf("Unexpected error: %s\n", e.getMessage());
+            console.printf("Unexpected error: %s\n", e.getMessage());
         }
     }
 
@@ -266,13 +270,13 @@ public class Main {
      * Saves collection to file
      */
     @CommandHandler(description = "Saves collection to file")
-    public void save() {
+    public void save(final Console console) {
         try {
             saveCSV();
 
-            System.out.printf("Saved in %s\n", filename);
+            console.printf("Saved in %s\n", filename);
         } catch (Throwable e) {
-            System.out.printf("Unexpected error: %s\n", e.getMessage());
+            console.printf("Unexpected error: %s\n", e.getMessage());
         }
     }
 
@@ -290,10 +294,10 @@ public class Main {
     public void info(final Console console) {
         tryLoadCSV(console);
 
-        System.out.printf("Elements in collection: %d\n", livingObjects.size());
+        console.printf("Elements in collection: %d\n", livingObjects.size());
 
         metadata.entrySet().parallelStream()
-                .forEach(field -> System.out.printf("%s: %s\n", field.getKey(), field.getValue()));
+                .forEach(field -> console.printf("%s: %s\n", field.getKey(), field.getValue()));
     }
 
     /**
@@ -331,7 +335,7 @@ public class Main {
         if (counter == 0) {
             console.printWarning("no one elements have removed");
         } else {
-            System.out.printf("%d elements removed", counter);
+            console.printf("%d elements removed", counter);
         }
     }
 

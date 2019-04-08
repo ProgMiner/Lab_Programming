@@ -1,11 +1,11 @@
 package ru.byprogminer.Lab3_Programming;
 
-public interface Moveable {
+public interface Movable {
 
     enum Move {
         GO("идёт"), RUN("бежит"), SWIM("плывёт"), FLY("летит");
 
-        private String actionName;
+        private final String actionName;
 
         Move(String actionName) {
             this.actionName = actionName;

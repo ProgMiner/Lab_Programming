@@ -7,8 +7,8 @@ import java.util.Objects;
 
 public class NotFoundException extends Exception { // Исключения наследуются от класса Exception (или Error/RuntimeException, если unchecked)
 
-    private Object object; // Поле, хранящее объект с которым произошло искючение
-                           // Может не быть
+    private final Object object; // Поле, хранящее объект с которым произошло искючение
+                                 // Может не быть
 
     // Конструктор должен принимать объект или строку,
     // Если строку, она должна быть передана в super() в качестве сообщения исключения
