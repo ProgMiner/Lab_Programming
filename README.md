@@ -1,6 +1,6 @@
-# Checklist
+# Lab6
 
-## Lab6
+## Checklist
 
   - [x] Stable data stream
   - [ ] New command runners
@@ -9,3 +9,7 @@
   - [ ] Packets
   - [ ] ...
   - [ ] Done!
+
+## Bugs
+
+  - Packets receives from all clients on similar (same?) addresses

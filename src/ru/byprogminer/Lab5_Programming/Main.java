@@ -459,8 +459,9 @@ public class Main {
         final LivingObjectCSVWriter writer =
                 new LivingObjectCSVWriter(new CSVWriterWithHeader(new CSVWriter(new FileWriter(filename))));
 
-        metadata.entrySet().parallelStream().forEach(throwing().consumer(meta -> writer.writeMetadata(meta.getKey(), meta.getValue())));
-        livingObjects.parallelStream().forEach(throwing().consumer(writer::write));
+        metadata.entrySet().parallelStream().forEachOrdered(throwing().consumer(meta ->
+                writer.writeMetadata(meta.getKey(), meta.getValue())));
+        livingObjects.parallelStream().forEachOrdered(throwing().consumer(writer::write));
     }
 
     @SuppressWarnings("unchecked")

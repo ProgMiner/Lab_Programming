@@ -52,7 +52,7 @@ public class LivingObjectCSVWriter {
         writeObject(object, "object", id, null);
         writeRow("object", id, "lives", object.isLives());
 
-        object.getItems().parallelStream().forEach(
+        object.getItems().parallelStream().forEachOrdered(
                 throwing().consumer(item -> writeItem(item, id)));
     }
 
