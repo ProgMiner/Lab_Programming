@@ -86,7 +86,7 @@ public class Main {
             }
         }
 
-        final Console console = new Console(CommandRunner.getCommandRunner(main));
+        final Console console = new Console(ReflectionCommandRunner.make(main));
 
         // Try to load file
         try {

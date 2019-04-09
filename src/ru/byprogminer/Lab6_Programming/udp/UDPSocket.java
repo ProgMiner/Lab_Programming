@@ -8,7 +8,9 @@ import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CRC32;
 
@@ -382,7 +384,7 @@ public abstract class UDPSocket<D> implements Closeable {
         packet.putLong(previous);
         packet.put((byte) (count & 0xFF));
         while (packet.hasRemaining() && content.hasRemaining()) {
-            packet.put(content);
+            packet.put(content.get());
         }
 
         packet.flip();

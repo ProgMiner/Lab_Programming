@@ -1,8 +1,8 @@
 package ru.byprogminer.Lab6_Programming;
 
-import ru.byprogminer.Lab5_Programming.CommandRunner;
 import ru.byprogminer.Lab5_Programming.Console;
 import ru.byprogminer.Lab5_Programming.Main;
+import ru.byprogminer.Lab5_Programming.ReflectionCommandRunner;
 import ru.byprogminer.Lab6_Programming.udp.UDPServerSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
@@ -51,7 +51,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
             final PipedOutputStream in = new PipedOutputStream();
             try {
                 final Console console = new Console(
-                        CommandRunner.getCommandRunner(main),
+                        ReflectionCommandRunner.make(main),
                         new PipedInputStream(in),
                         new PrintStream(new PipedOutputStream(out))
                 );
