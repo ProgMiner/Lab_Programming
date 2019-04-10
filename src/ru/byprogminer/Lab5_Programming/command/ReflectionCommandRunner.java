@@ -1,43 +1,26 @@
 package ru.byprogminer.Lab5_Programming.command;
 
-import java.lang.reflect.InvocationTargetException;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.*;
 
-public class ReflectionCommandRunner extends CommandRunner {
+public class ReflectionCommandRunner extends ListCommandRunner {
 
-    private interface Invokable<T> {
+    @Target(ElementType.METHOD)
+    @Retention(RetentionPolicy.RUNTIME)
+    public @interface CommandHandler {
 
-        T invoke(Object thiz, Object... args) throws IllegalAccessException, InvocationTargetException;
+        String NULL = "\0";
+
+        String alias() default NULL;
+        String description() default NULL;
+        String usage() default NULL;
     }
 
     private final Object handler;
-
-    private final Map<Class, Object> specialParameterTypes = new HashMap<>();
-    private final Map<String, Map<Integer, Invokable>> commands = new HashMap<>();
-    private final Map<String, String> descriptions = new HashMap<>();
-    private final Map<String, String> usages = new HashMap<>();
-
-    private final Set<String> commandNames = Collections.unmodifiableSet(commands.keySet());
-
-    @SuppressWarnings("unchecked")
-    private final Map<Class, Object> specialParameterTypesProxy =
-            (Map<Class, Object>) Proxy.newProxyInstance(
-                    HashMap.class.getClassLoader(),
-                    HashMap.class.getInterfaces(),
-                    (object, method, args) -> {
-                        final int sptCount = specialParameterTypes.size();
-
-                        final Object ret = method.invoke(specialParameterTypes, args);
-
-                        if (sptCount != specialParameterTypes.size()) {
-                            regenerateCommands();
-                        }
-
-                        return ret;
-                    }
-            );
 
     public static ReflectionCommandRunner make(final Object handler, Map<Class, Object> specialParameterTypes) {
         final ReflectionCommandRunner ret = new ReflectionCommandRunner(handler);
@@ -60,69 +43,7 @@ public class ReflectionCommandRunner extends CommandRunner {
     }
 
     @Override
-    public Set<String> getCommands() {
-        return commandNames;
-    }
-
-    @Override
-    public String getDescription(final String name) {
-        return descriptions.get(Objects.requireNonNull(name));
-    }
-
-    @Override
-    public String getUsage(final String name) {
-        return usages.get(Objects.requireNonNull(name));
-    }
-
-    @Override
-    public Integer[] getArgumentsCount(final String name) {
-        return commands.get(Objects.requireNonNull(name))
-                .keySet().toArray(new Integer[0]);
-    }
-
-    @Override
-    public Map<Class, Object> getSpecialParameterTypes() {
-        return specialParameterTypesProxy;
-    }
-
-    @Override
-    protected void performCommand(final String command, final List<String> args) throws CommandPerformException {
-        final Map<Integer, Invokable> c = commands.get(command);
-
-        if (c == null) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), new UnsupportedOperationException("unknown command " + command));
-        }
-
-        Invokable invokable = null;
-        for (final Map.Entry<Integer, Invokable> cc: c.entrySet()) {
-            // Search at least one command
-
-            invokable = cc.getValue();
-
-            if (cc.getKey().equals(args.size())) {
-                // Full match
-                break;
-            }
-        }
-
-        if (invokable == null) {
-            return;
-        }
-
-        try {
-            synchronized (handler) {
-                invokable.invoke(handler, args.toArray());
-            }
-        } catch (final IllegalAccessException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        } catch (final InvocationTargetException e) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), e.getCause());
-        } catch (final Throwable e) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), e);
-        }
-    }
-
-    private synchronized void regenerateCommands() {
+    protected synchronized void regenerateCommands() {
         commands.clear();
         descriptions.clear();
         usages.clear();
@@ -132,7 +53,8 @@ public class ReflectionCommandRunner extends CommandRunner {
                 continue;
             }
 
-            final String commandName = m.getName().toLowerCase();
+            final String alias = m.getAnnotation(CommandHandler.class).alias();
+            final String commandName = alias.equals(CommandHandler.NULL) ? m.getName().toLowerCase() : alias;
 
             final String description = m.getAnnotation(CommandHandler.class).description();
             descriptions.putIfAbsent(commandName, description.equals(CommandHandler.NULL) ? null : description);
@@ -141,7 +63,7 @@ public class ReflectionCommandRunner extends CommandRunner {
             usages.putIfAbsent(commandName, usage.equals(CommandHandler.NULL) ? null : usage);
 
             int specialParameterCount = 0;
-            Invokable commandInvokable = m::invoke;
+            Invokable commandInvokable = (args) -> m.invoke(handler, args);
             final int parameterCount = m.getParameterCount();
             if (parameterCount > 0) {
                 int current = 0;
@@ -162,7 +84,7 @@ public class ReflectionCommandRunner extends CommandRunner {
                     final int finalSpecialParameterCount = specialParameterCount;
                     final Invokable finalCommandInvokable = commandInvokable;
 
-                    commandInvokable = (thiz, sourceArgs) -> {
+                    commandInvokable = (sourceArgs) -> {
                         Object[] args = new Object[sourceArgs.length + finalSpecialParameterCount];
 
                         for (int i = 0, j = 0; i < args.length; ++i) {
@@ -173,7 +95,7 @@ public class ReflectionCommandRunner extends CommandRunner {
                             }
                         }
 
-                        return finalCommandInvokable.invoke(thiz, args);
+                        finalCommandInvokable.invoke(args);
                     };
                 }
             }

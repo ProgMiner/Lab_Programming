@@ -1,23 +1,41 @@
 package ru.byprogminer.Lab6_Programming;
 
+import ru.byprogminer.Lab5_Programming.command.CallableCommandRunner;
+import ru.byprogminer.Lab5_Programming.command.Console;
 import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
+import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
 public class Main {
 
-    public static final int PART_SIZE = 1024;
-    public static final int CONNECT_DELAY = 3000;
+    public final static int PART_SIZE = 1024;
+    public final static int CONNECT_DELAY = 3000;
 
     private static final String USAGE = "Usage: java -jar lab6_client.jar <port> [server]\n" +
             "  - port\n" +
             "    Port number\n" +
             "  - server\n" +
             "    Not required server address";
+
+    private final static CallableCommandRunner commandRunner = new CallableCommandRunner();
+
+    private volatile static UDPSocket<DatagramPacket> socket = null;
+
+    static {
+        commandRunner
+                .command("add").usage("add <element>")
+                .description("Adds element to collection.\n" +
+                        "Element represents in JSON and must have a 'name' field")
+                .callable(arrayOf(String.class, Console.class), args -> {
+                    assertSocketCreated();
+
+                    // TODO
+                }).save();
+    }
 
     public static void main(String[] args) {
         // Check is argument provided
@@ -100,5 +118,11 @@ public class Main {
         }
 
         System.exit(0);
+    }
+
+    private static void assertSocketCreated() {
+        if (socket == null) {
+            throw new IllegalStateException("socket isn't created");
+        }
     }
 }

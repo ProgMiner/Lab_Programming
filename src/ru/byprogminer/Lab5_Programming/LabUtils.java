@@ -97,4 +97,9 @@ public final class LabUtils {
     public static Throwing throwing() {
         return Throwing.getThrowing();
     }
+
+    @SafeVarargs
+    public static <T> T[] arrayOf(T... elements) {
+        return elements;
+    }
 }
