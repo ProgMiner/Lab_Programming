@@ -3,10 +3,14 @@
 ## Checklist
 
   - [x] Stable data stream
-  - [ ] New command runners
-    - [X] Abstract command runner
-    - [ ] Special command runner
+  - [X] New command runners
   - [ ] Packets
+    - [X] Packet classes
+    - [ ] Sending
+      - [X] Command runner
+      - [ ] Console
+    - [ ] Receiving
+    - [ ] Processing
   - [ ] ...
   - [ ] Done!
 

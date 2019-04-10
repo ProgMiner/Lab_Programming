@@ -136,7 +136,7 @@ public class Console {
         if (args.length == 0) {
             printer.print(translator.get("commands.title.help"));
 
-            commands.parallelStream().forEach(command ->
+            commands.parallelStream().forEachOrdered(command ->
                     printHelpForCommand(command, false));
 
             return;

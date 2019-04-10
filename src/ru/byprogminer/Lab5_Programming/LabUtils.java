@@ -1,10 +1,13 @@
 package ru.byprogminer.Lab5_Programming;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab5_Programming.throwing.Throwing;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
@@ -12,6 +15,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 public final class LabUtils {
 
@@ -43,10 +47,10 @@ public final class LabUtils {
             callIfNotNull(map.get("x"), s -> object.setX(Double.parseDouble(s)));
 
             cause = "object y have bad format";
-            callIfNotNull(map.get("y"), s -> object.setX(Double.parseDouble(s)));
+            callIfNotNull(map.get("y"), s -> object.setY(Double.parseDouble(s)));
 
             cause = "object z have bad format";
-            callIfNotNull(map.get("z"), s -> object.setX(Double.parseDouble(s)));
+            callIfNotNull(map.get("z"), s -> object.setZ(Double.parseDouble(s)));
 
             return object;
         } catch (Throwable e) {
@@ -101,5 +105,36 @@ public final class LabUtils {
     @SafeVarargs
     public static <T> T[] arrayOf(T... elements) {
         return elements;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static LivingObject jsonToLivingObject(String json) {
+        String exception = "an error occurred while json reading";
+
+        try {
+            JSONObject jsonObject = JSON.parseObject(Objects.requireNonNull(json));
+
+            exception = "an error occurred while living object constructing";
+            LivingObject livingObject = mapToObject(jsonObject.entrySet().parallelStream()
+                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
+                    LabUtils::livingObjectConstructor);
+
+            callIf(jsonObject.get("lives"), Boolean.class::isInstance, lives ->
+                    setLivingObjectLives(livingObject, (Boolean) lives));
+
+            callIf(jsonObject.get("items"), Collection.class::isInstance, items -> ((Collection<?>) items).parallelStream()
+                    .forEach(_item -> callIf(_item, JSONObject.class::isInstance, item -> livingObject.getItems()
+                            .add(mapToObject(((Map<String, ?>) item).entrySet().parallelStream()
+                                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
+                                    LabUtils::objectConstructor)))));
+
+            return livingObject;
+        } catch (Throwable e) {
+            if (e.getMessage() != null) {
+                throw new IllegalArgumentException(exception + ", " + e.getMessage());
+            }
+
+            throw new IllegalArgumentException(exception);
+        }
     }
 }

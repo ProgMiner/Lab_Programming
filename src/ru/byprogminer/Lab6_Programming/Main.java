@@ -1,14 +1,19 @@
 package ru.byprogminer.Lab6_Programming;
 
+import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab5_Programming.command.CallableCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.Console;
+import ru.byprogminer.Lab5_Programming.command.ListCommandRunner.Invokable;
 import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.function.Function;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
+import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 public class Main {
 
@@ -30,11 +35,51 @@ public class Main {
                 .command("add").usage("add <element>")
                 .description("Adds element to collection.\n" +
                         "Element represents in JSON and must have a 'name' field")
-                .callable(arrayOf(String.class, Console.class), args -> {
-                    assertSocketCreated();
+                .callable(arrayOf(String.class), sendElement(Packet.Request.Add.class)).save()
 
-                    // TODO
-                }).save();
+                .command("help").usage("help [command]")
+                .description("Shows available commands or description of provided command")
+                .callable(arrayOf(Console.class), args -> ((Console) args[0]).printHelp(arrayOf()))
+                .callable(arrayOf(String.class, Console.class), args ->
+                        ((Console) args[1]).printHelp(arrayOf(args[0].toString()))).save()
+
+                .command("exit").description("Exit")
+                .callable(arrayOf(Console.class), args -> ((Console) args[0]).quit()).save()
+
+                .command("load").description("Reloads current file on server")
+                .callable(arrayOf(), sendSimple(Packet.Request.Load.class)).save()
+
+                .command("ls").description("Alias for `show`")
+                .callable(arrayOf(), sendSimple(Packet.Request.Show.class)).save()
+
+                .command("save").description("Saves current file on server")
+                .callable(arrayOf(), sendSimple(Packet.Request.Save.class)).save()
+
+                .command("show").description("Shows all elements from the collection")
+                .callable(arrayOf(), sendSimple(Packet.Request.Show.class)).save()
+
+                .command("remove_lower").usage("remove_lower <element>")
+                .description("Removes all lower than provided element elements from collection.\n" +
+                        "Element represents in JSON and must have a 'name' field")
+                .callable(arrayOf(String.class), sendElement(Packet.Request.RemoveLower.class)).save()
+
+                .command("remove_greater").usage("remove_greater <element>")
+                .description("Removes all greater than provided element elements from collection.\n" +
+                        "Element represents in JSON and must have a 'name' field")
+                .callable(arrayOf(String.class), sendElement(Packet.Request.RemoveGreater.class)).save()
+
+                .command("remove").usage("remove <element>")
+                .description("Removes element from collection.\n" +
+                        "Element represents in JSON and must have a 'name' field")
+                .callable(arrayOf(String.class), sendElement(Packet.Request.Remove.class)).save()
+
+                .command("info").description("Prints information about collection")
+                .callable(arrayOf(), sendSimple(Packet.Request.Info.class)).save()
+
+                .command("import").usage("import <filename>")
+                .description("Imports file with name <filename> to the remote collection")
+                .callable(arrayOf(String.class), send(throwing().function(args ->
+                        new Packet.Request.Import(Files.readAllBytes(Paths.get(args[0].toString())))))).save();
     }
 
     public static void main(String[] args) {
@@ -81,12 +126,8 @@ public class Main {
                 try {
                     final Packet packet = udpSocket.receive(Packet.class, 600000);
 
-                    if (packet instanceof Packet.Response.ConsoleOutput) {
-                        System.out.write(((Packet.Response.ConsoleOutput) packet).getContent());
-                    }
-                } catch (SocketTimeoutException e) {
-                    System.out.println("It looks like the server is unavailable.");
-                } catch (IOException | InterruptedException e) {
+                    // TODO
+                } catch (InterruptedException | SocketTimeoutException e) {
                     e.printStackTrace();
                 }
             }
@@ -94,20 +135,7 @@ public class Main {
 
         try {
             while (!udpSocket.isClosed()) {
-                try {
-                    final int bufferStart = System.in.read();
-                    if (bufferStart < 0) {
-                        break;
-                    }
-
-                    final byte[] buffer = new byte[System.in.available() + 1];
-                    System.in.read(buffer, 1, System.in.available());
-                    buffer[0] = (byte) (bufferStart & 0xFF);
-
-                    udpSocket.send(new Packet.Request.ConsoleInput(buffer));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                // TODO
             }
         } finally {
             try {
@@ -124,5 +152,26 @@ public class Main {
         if (socket == null) {
             throw new IllegalStateException("socket isn't created");
         }
+    }
+
+    private static Invokable send(Function<Object[], Packet> packet) {
+        return (args) -> {
+            assertSocketCreated();
+
+            try {
+                socket.send(packet.apply(args));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        };
+    }
+
+    private static Invokable sendSimple(Class<? extends Packet> packetType) {
+        return send(throwing().function(args -> packetType.getConstructor().newInstance()));
+    }
+
+    private static Invokable sendElement(Class<? extends Packet> packetType) {
+        return send(throwing().function(args -> packetType.getConstructor(LivingObject.class)
+                .newInstance(jsonToLivingObject(args[0].toString()))));
     }
 }

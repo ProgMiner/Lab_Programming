@@ -1,7 +1,5 @@
 package ru.byprogminer.Lab5_Programming;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab5_Programming.command.Console;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
@@ -232,7 +230,7 @@ public class Main {
      *
      * @param console console object
      */
-    @CommandHandler(description = "Shows all elements in collection")
+    @CommandHandler(description = "Shows all elements from the collection")
     public void show(final Console console) {
         tryLoadCSV(console);
 
@@ -282,10 +280,6 @@ public class Main {
             console.printf("Unexpected error: %s\n", e.getMessage());
         }
     }
-
-//    public void import() {
-//        // TODO
-//    }
 
     /**
      * Usage: <code>info</code><br>
@@ -467,34 +461,4 @@ public class Main {
         livingObjects.parallelStream().forEachOrdered(throwing().consumer(writer::write));
     }
 
-    @SuppressWarnings("unchecked")
-    private LivingObject jsonToLivingObject(String json) {
-        String exception = "an error occurred while json reading";
-
-        try {
-            JSONObject jsonObject = JSON.parseObject(Objects.requireNonNull(json));
-
-            exception = "an error occurred while living object constructing";
-            LivingObject livingObject = mapToObject(jsonObject.entrySet().parallelStream()
-                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
-                    LabUtils::livingObjectConstructor);
-
-            callIf(jsonObject.get("lives"), Boolean.class::isInstance, lives ->
-                    setLivingObjectLives(livingObject, (Boolean) lives));
-
-            callIf(jsonObject.get("items"), Collection.class::isInstance, items -> ((Collection<?>) items).parallelStream()
-                    .forEach(_item -> callIf(_item, JSONObject.class::isInstance, item -> livingObject.getItems()
-                            .add(mapToObject(((Map<String, ?>) item).entrySet().parallelStream()
-                                    .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
-                                    LabUtils::objectConstructor)))));
-
-            return livingObject;
-        } catch (Throwable e) {
-            if (e.getMessage() != null) {
-                throw new IllegalArgumentException(exception + ", " + e.getMessage());
-            }
-
-            throw new IllegalArgumentException(exception);
-        }
-    }
 }

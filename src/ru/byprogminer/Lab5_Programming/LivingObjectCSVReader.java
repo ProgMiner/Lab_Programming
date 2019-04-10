@@ -39,7 +39,6 @@ public class LivingObjectCSVReader implements Iterable<LivingObject>, Iterator<L
         final Map<String, String> livingObjectProperties = objects.remove(livingObjectId);
 
         final LivingObject livingObject = mapToObject(livingObjectProperties, LabUtils::livingObjectConstructor);
-
         callIfNotNull(livingObjectProperties.get("lives"), s -> setLivingObjectLives(livingObject, Boolean.parseBoolean(s)));
 
         callIfNotNull(items.remove(livingObjectId), items -> items.values().parallelStream()

@@ -47,59 +47,20 @@ public class Server<C extends DatagramChannel> implements Runnable {
 
         @Override
         public void run() {
-            final PipedInputStream out = new PipedInputStream();
-            final PipedOutputStream in = new PipedOutputStream();
             try {
-                final Console console = new Console(
-                        ReflectionCommandRunner.make(main),
-                        new PipedInputStream(in),
-                        new PrintStream(new PipedOutputStream(out))
-                );
-
-                new Thread(console::exec).start();
-                while (!console.isRunning()) {
-                    Thread.yield();
-                }
-
-                final Thread outputThread = new Thread(() -> {
-                    while (console.isRunning() && !socket.isClosed()) {
-                        try {
-                            final int available = out.available();
-                            if (available == 0) {
-                                Thread.yield();
-                                continue;
-                            }
-
-                            final byte[] buffer = new byte[available];
-                            out.read(buffer);
-
-                            socket.send(new Packet.Response.ConsoleOutput(buffer));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                });
-
-                outputThread.start();
-                while (console.isRunning() && !socket.isClosed()) {
+                while (!socket.isClosed()) {
                     try {
                         final Packet packet = socket.receive(Packet.class, 500);
 
-                        if (packet instanceof Packet.Request.ConsoleInput) {
-                            in.write(((Packet.Request.ConsoleInput) packet).getContent());
-                        }
+                        // TODO
                     } catch (SocketTimeoutException ignored) {
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             } finally {
                 try {
                     socket.close();
-                    out.close();
-                    in.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
