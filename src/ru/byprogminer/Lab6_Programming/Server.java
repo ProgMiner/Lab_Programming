@@ -1,8 +1,8 @@
 package ru.byprogminer.Lab6_Programming;
 
-import ru.byprogminer.Lab5_Programming.Console;
 import ru.byprogminer.Lab5_Programming.Main;
-import ru.byprogminer.Lab5_Programming.ReflectionCommandRunner;
+import ru.byprogminer.Lab5_Programming.command.Console;
+import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
 import ru.byprogminer.Lab6_Programming.udp.UDPServerSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 

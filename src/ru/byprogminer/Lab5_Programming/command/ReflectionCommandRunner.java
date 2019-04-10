@@ -1,4 +1,4 @@
-package ru.byprogminer.Lab5_Programming;
+package ru.byprogminer.Lab5_Programming.command;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

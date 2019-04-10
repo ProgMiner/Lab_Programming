@@ -1,4 +1,4 @@
-package ru.byprogminer.Lab5_Programming;
+package ru.byprogminer.Lab5_Programming.command;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
