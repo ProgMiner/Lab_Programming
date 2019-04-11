@@ -84,7 +84,7 @@ public class CollectionManager {
     public void show(final StatusPrinter printer) {
         tryLoadCSV(printer);
 
-        livingObjects.parallelStream()
+        livingObjects.stream()
                 .map(LivingObject::toString)
                 .forEachOrdered(printer::println);
     }

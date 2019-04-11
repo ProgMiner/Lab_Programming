@@ -4,11 +4,15 @@ import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab5_Programming.command.CallableCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.Console;
 import ru.byprogminer.Lab5_Programming.command.ListCommandRunner.Invokable;
+import ru.byprogminer.Lab6_Programming.Packet.Response;
 import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.function.Function;
@@ -28,7 +32,7 @@ public class Main {
 
     private final static CallableCommandRunner commandRunner = new CallableCommandRunner();
 
-    private volatile static UDPSocket<DatagramPacket> socket = null;
+    private volatile static UDPSocket<?> socket = null;
     private volatile static Console console = null;
 
     static {
@@ -92,7 +96,6 @@ public class Main {
             System.exit(1);
         }
 
-        final SocketUDPSocket<DatagramSocket> udpSocket;
         try {
             final int port = Integer.parseInt(args[0]);
 
@@ -103,18 +106,18 @@ public class Main {
                 address = new InetSocketAddress(port);
             }
 
-            final DatagramSocket socket = new DatagramSocket();
-            socket.setSoTimeout(3000);
+            final DatagramSocket datagramSocket = new DatagramSocket();
+            datagramSocket.setSoTimeout(3000);
 
-            udpSocket = new SocketUDPSocket<>(socket, PART_SIZE);
+            socket = new SocketUDPSocket<>(datagramSocket, PART_SIZE);
 
             do {
                 try {
-                    udpSocket.connect(address, CONNECT_DELAY);
+                    socket.connect(address, CONNECT_DELAY);
                 } catch (SocketTimeoutException e) {
                     System.out.println("Server is unavailable. Retry");
                 }
-            } while (!udpSocket.isConnected());
+            } while (!socket.isConnected());
         } catch (Throwable e) {
             System.err.printf("Execution error: %s\n", e.getMessage());
             System.err.println(USAGE);
@@ -124,22 +127,17 @@ public class Main {
 
         System.out.println("Connected successfully");
 
-        console = new Console(commandRunner);
-        console.exec();
-
         try {
-            while (!udpSocket.isClosed()) {
-                // TODO
-            }
+            console = new Console(commandRunner);
+            console.exec();
         } finally {
             try {
-                udpSocket.close();
+                socket.close();
+                System.exit(0);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
-        System.exit(0);
     }
 
     private static void assertSocketCreated() {
@@ -160,21 +158,23 @@ public class Main {
 
             while (!socket.isClosed()) {
                 try {
-                    final Packet.Response response = socket.receive(Packet.Response.class, 60000);
+                    final Response response = socket.receive(Response.class, 60000);
 
-                    switch (response.getStatus()) {
-                        case ERR:
-                            console.printError(response.getContent());
-                            break;
-                        case WARN:
-                            console.printWarning(response.getContent());
-                            break;
-                        case OK:
-                            console.println(response.getContent());
-                            break;
+                    if (response instanceof Response.Message) {
+                        switch (((Response.Message) response).getStatus()) {
+                            case ERR:
+                                console.printError(((Response.Message) response).getContent());
+                                break;
+                            case WARN:
+                                console.printWarning(((Response.Message) response).getContent());
+                                break;
+                            case OK:
+                                console.print(((Response.Message) response).getContent());
+                                break;
+                        }
+                    } else if (response instanceof Response.Done) {
+                        break;
                     }
-
-                    break;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } catch (SocketTimeoutException e) {

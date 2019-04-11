@@ -4,7 +4,7 @@ public interface StatusPrinter {
 
     void print(Object text);
     void println(Object text);
-    void printf(String formant, Object... text);
+    void printf(String format, Object... text);
     void printWarning(Object text);
     void printError(Object text);
 }

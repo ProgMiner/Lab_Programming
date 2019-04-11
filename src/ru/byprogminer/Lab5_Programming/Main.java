@@ -71,7 +71,7 @@ public class Main {
                 serverChannel.bind(new InetSocketAddress(port));
             }
 
-            final Server<DatagramChannel> server = new Server<>(main, serverChannel, PART_SIZE);
+            final Server<DatagramChannel> server = new Server<>(main.collection, serverChannel, PART_SIZE);
             final Thread serverThread = new Thread(server);
             serverThread.start();
 

@@ -10,6 +10,8 @@
     - [ ] Receiving
       - [X] Extract collection from main class
       - [ ] Processing
+        - [X] All commands that not Import
+        - [ ] Import command
   - [ ] ...
   - [ ] Done!
 

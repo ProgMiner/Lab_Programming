@@ -73,36 +73,43 @@ public abstract class Packet implements Serializable {
         private Request() {}
     }
 
-    public static class Response extends Packet {
+    public abstract static class Response extends Packet {
 
-        public enum Status {
+        public static class Message extends Response {
 
-            OK, WARN, ERR;
+            public enum Status {
 
-            public Status update(Status next) {
-                if (next.ordinal() < ordinal()) {
-                    return this;
+                OK, WARN, ERR;
+
+                public Status update(Status next) {
+                    if (next.ordinal() < ordinal()) {
+                        return this;
+                    }
+
+                    return next;
                 }
+            }
 
-                return next;
+            private final String content;
+            private final Status status;
+
+            public Message(String content, Status status) {
+                this.content = content;
+                this.status = status;
+            }
+
+            public String getContent() {
+                return content;
+            }
+
+            public Status getStatus() {
+                return status;
             }
         }
 
-        private final String content;
-        private final Status status;
+        public static class Done extends Response {}
 
-        public Response(String content, Status status) {
-            this.content = content;
-            this.status = status;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public Status getStatus() {
-            return status;
-        }
+        private Response() {}
     }
 
     private Packet() {}
