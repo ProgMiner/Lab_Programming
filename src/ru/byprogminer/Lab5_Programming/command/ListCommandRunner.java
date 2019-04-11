@@ -4,6 +4,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.*;
 
+import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
+
 public abstract class ListCommandRunner extends CommandRunner {
 
     public interface Invokable {
@@ -67,23 +69,12 @@ public abstract class ListCommandRunner extends CommandRunner {
         final Map<Integer, Invokable> c = commands.get(command);
 
         if (c == null) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), new UnsupportedOperationException("unknown command " + command));
+            throw new CommandPerformException(command, args.toArray(arrayOf()), new UnsupportedOperationException("unknown command " + command));
         }
 
-        Invokable invokable = null;
-        for (final Map.Entry<Integer, Invokable> cc: c.entrySet()) {
-            // Search at least one command
-
-            invokable = cc.getValue();
-
-            if (cc.getKey().equals(args.size())) {
-                // Full match
-                break;
-            }
-        }
-
+        Invokable invokable = c.get(args.size());
         if (invokable == null) {
-            return;
+            throw new CommandPerformException(command, args.toArray(arrayOf()), new UnsupportedOperationException("illegal count of arguments"));
         }
 
         try {

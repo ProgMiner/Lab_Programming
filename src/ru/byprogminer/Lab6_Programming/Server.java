@@ -42,7 +42,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
             try {
                 datagramSocket.setSoTimeout(3000);
             } catch (SocketException e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
 
@@ -55,7 +55,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                     try {
                         socket.send(new Response.Message(text.toString(), Response.Message.Status.OK), CLIENT_TIMEOUT);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
                 }
 
@@ -76,7 +76,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                     try {
                         socket.send(new Response.Message(text.toString(), Response.Message.Status.WARN), CLIENT_TIMEOUT);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
                 }
 
@@ -85,7 +85,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                     try {
                         socket.send(new Response.Message(text.toString(), Response.Message.Status.ERR), CLIENT_TIMEOUT);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
                 }
             };
@@ -112,20 +112,20 @@ public class Server<C extends DatagramChannel> implements Runnable {
                         } else if (packet instanceof Request.Info) {
                             collection.info(printer);
                         } else if (packet instanceof Request.Import) {
-                            // TODO
+                            collection.importFile(((Request.Import) packet).getContent(), printer);
                         }
 
                         socket.send(new Response.Done(), CLIENT_TIMEOUT);
                     } catch (SocketTimeoutException ignored) {
                     } catch (Throwable e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
                 }
             } finally {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    // e.printStackTrace();
                 }
             }
         }
@@ -144,7 +144,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
             try {
                 new Thread(new ClientWorker(serverSocket.accept())).start();
             } catch (Throwable e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
     }

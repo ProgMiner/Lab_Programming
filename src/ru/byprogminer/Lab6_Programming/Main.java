@@ -9,8 +9,12 @@ import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.function.Function;
 
@@ -81,8 +85,14 @@ public class Main {
 
                 .command("import").usage("import <filename>")
                 .description("Imports file with name <filename> to the remote collection")
-                .callable(arrayOf(String.class), send(throwing().function(args ->
-                        new Packet.Request.Import(Files.readAllBytes(Paths.get(args[0].toString())))))).save();
+                .callable(arrayOf(String.class), send(throwing().function(args -> {
+                    try {
+                        return new Packet.Request.Import(Files.readAllBytes(Paths.get(args[0].toString())));
+                    } catch (NoSuchFileException e) {
+                        console.printError("File " + args[0].toString() + " not found");
+                        return null;
+                    }
+                }))).save();
     }
 
     public static void main(String[] args) {
@@ -116,12 +126,14 @@ public class Main {
         try {
             console = new Console(commandRunner);
             console.exec();
+        } catch (Throwable e) {
+            // e.printStackTrace();
         } finally {
             try {
                 socket.close();
                 System.exit(0);
             } catch (IOException e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
     }
@@ -137,7 +149,12 @@ public class Main {
             assertSocketCreated();
 
             try {
-                socket.send(packet.apply(args), Server.CLIENT_TIMEOUT);
+                final Packet request = packet.apply(args);
+                if (request == null) {
+                    return;
+                }
+
+                socket.send(request, Server.CLIENT_TIMEOUT);
 
                 while (!socket.isClosed()) {
                     try {
@@ -159,7 +176,7 @@ public class Main {
                             break;
                         }
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
                 }
             } catch (SocketTimeoutException e) {
@@ -170,10 +187,10 @@ public class Main {
 
                     System.out.println("Reconnected");
                 } catch (IOException ex) {
-                    ex.printStackTrace();
+                    // ex.printStackTrace();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         };
     }

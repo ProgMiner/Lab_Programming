@@ -7,10 +7,7 @@ import ru.byprogminer.Lab5_Programming.csv.CSVReaderWithHeader;
 import ru.byprogminer.Lab5_Programming.csv.CSVWriter;
 import ru.byprogminer.Lab5_Programming.csv.CSVWriterWithHeader;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
@@ -170,6 +167,27 @@ public class CollectionManager {
         livingObjects.remove(element);
         sortedLivingObjects.remove(element);
         trySaveCSV(printer);
+    }
+
+    public void importFile(final byte[] file, final StatusPrinter printer) {
+        final LivingObjectCSVReader reader = new LivingObjectCSVReader(
+                new CSVReaderWithHeader(new CSVReader(new Scanner(new ByteArrayInputStream(file)))));
+
+        final Set<LivingObject> livingObjects = Collections.synchronizedSet(new HashSet<>());
+        for (LivingObject object: reader) {
+            livingObjects.add(object);
+        }
+
+        final int oldSize = livingObjects.size();
+
+        this.livingObjects.addAll(livingObjects);
+        sortedLivingObjects.addAll(livingObjects);
+
+        if (oldSize == this.livingObjects.size()) {
+            printer.printWarning("no one elements have imported");
+        } else {
+            printer.printf("%d elements imported", this.livingObjects.size() - oldSize);
+        }
     }
 
     public void loadCSV() throws FileNotFoundException {

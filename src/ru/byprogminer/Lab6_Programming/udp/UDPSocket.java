@@ -94,7 +94,7 @@ public abstract class UDPSocket<D> implements Closeable {
                     receivePacket();
                 } catch (SocketTimeoutException ignored) {
                 } catch (Throwable e) {
-                    e.printStackTrace();
+                    // e.printStackTrace();
                 }
             }
         }
@@ -328,7 +328,7 @@ public abstract class UDPSocket<D> implements Closeable {
                         Thread.yield();
                         Thread.sleep(RESEND_DELAY);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        // e.printStackTrace();
                     }
 
                     packet.rewind();
