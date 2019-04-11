@@ -8,7 +8,7 @@ import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class Console {
+public class Console implements StatusPrinter {
 
     private final CommandRunner runner;
     private final PrintStream printer;
@@ -151,23 +151,28 @@ public class Console {
         throw new IllegalArgumentException("unknown command " + command);
     }
 
-    public void print(final String msg) {
+    @Override
+    public void print(final Object msg) {
         printer.print(msg);
     }
 
-    public void println(final String msg) {
+    @Override
+    public void println(final Object msg) {
         printer.println(msg);
     }
 
+    @Override
     public void printf(final String format, final Object... args) {
         printer.printf(format, (Object[]) args);
     }
 
-    public void printError(final String msg) {
+    @Override
+    public void printError(final Object msg) {
         printf(translator.get("message.error"), msg);
     }
 
-    public void printWarning(final String msg) {
+    @Override
+    public void printWarning(final Object msg) {
         printf(translator.get("message.warning"), msg);
     }
 

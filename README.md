@@ -8,7 +8,7 @@
     - [X] Packet classes
     - [X] Sending
     - [ ] Receiving
-      - [ ] Extract collection from main class
+      - [X] Extract collection from main class
       - [ ] Processing
   - [ ] ...
   - [ ] Done!

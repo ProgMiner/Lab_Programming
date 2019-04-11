@@ -1,26 +1,18 @@
 package ru.byprogminer.Lab5_Programming;
 
-import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab5_Programming.command.Console;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner.CommandHandler;
-import ru.byprogminer.Lab5_Programming.csv.CSVReader;
-import ru.byprogminer.Lab5_Programming.csv.CSVReaderWithHeader;
-import ru.byprogminer.Lab5_Programming.csv.CSVWriter;
-import ru.byprogminer.Lab5_Programming.csv.CSVWriterWithHeader;
 import ru.byprogminer.Lab6_Programming.Server;
 
-import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
-import java.util.*;
 
+import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
-import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
 import static ru.byprogminer.Lab6_Programming.Main.PART_SIZE;
 
 public class Main {
@@ -31,11 +23,7 @@ public class Main {
             "  - port\n" +
             "    Not required port number for opened server";
 
-    private final Map<String, String> metadata = Collections.synchronizedMap(new HashMap<>());
-    private final Set<LivingObject> livingObjects = Collections.synchronizedSet(new HashSet<>());
-    private final NavigableSet<LivingObject> sortedLivingObjects = Collections.synchronizedNavigableSet(new TreeSet<>());
-
-    private String filename = null;
+    private final CollectionManager collection;
 
     public static void main(final String[] args) {
         // Check is argument provided
@@ -46,8 +34,7 @@ public class Main {
             System.exit(1);
         }
 
-        final Main main = new Main();
-        main.filename = args[0];
+        final Main main = new Main(new CollectionManager(args[0]));
 
         Short port = null;
         if (args.length > 1) {
@@ -64,9 +51,9 @@ public class Main {
 
         // Try to load file
         try {
-            main.loadCSV();
+            main.collection.loadCSV();
         } catch (final FileNotFoundException e) {
-            console.printWarning("file \"" + main.filename + "\" isn't exists. It will be created");
+            console.printWarning("file \"" + main.collection.getFilename() + "\" isn't exists. It will be created");
         } catch (final Throwable e) {
             System.err.printf("Execution error: %s\n", e.getMessage());
             System.err.println(USAGE);
@@ -105,7 +92,7 @@ public class Main {
             console.exec();
 
             try {
-                main.saveCSV();
+                main.collection.saveCSV();
 
                 break;
             } catch (IOException e) {
@@ -116,314 +103,83 @@ public class Main {
         System.exit(0);
     }
 
-    {
-        // Set initialize date to current by default
-        metadata.put("Initialize date", new Date().toString());
+    private Main(CollectionManager collection) {
+        this.collection = collection;
     }
 
-    private Main() {}
-
-    /**
-     * Usage: <code>add &lt;element&gt;</code><br>
-     * Adds element to collection.<br>
-     * Element represents in JSON and must have a 'name' field
-     *
-     * @param elementString element in JSON
-     * @param console console object
-     */
     @CommandHandler(
             usage = "add <element>",
             description = "Adds element to collection.\n" +
                     "Element represents in JSON and must have a 'name' field"
     )
     public void add(final String elementString, final Console console) {
-        final LivingObject element = jsonToLivingObject(elementString);
-
-        tryLoadCSV(console);
-        if (livingObjects.contains(element)) {
-            console.printWarning("specified element is already contains in collection");
-            return;
-        }
-
-        livingObjects.add(element);
-        sortedLivingObjects.add(element);
-        trySaveCSV(console);
+        collection.add(jsonToLivingObject(elementString), console);
     }
 
-    /**
-     * Usage: <code>remove_greater &lt;element&gt;</code><br>
-     * Removes all greater than provided element elements from collection.<br>
-     * Element represents in JSON and must have a 'name' field
-     *
-     * @param elementString element in JSON
-     * @param console console object
-     */
     @CommandHandler(
             usage = "remove_greater <element>",
             description = "Removes all greater than provided element elements from collection.\n" +
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove_greater(final String elementString, final Console console) {
-        final LivingObject element = jsonToLivingObject(elementString);
-
-        int counter = 0;
-        LivingObject greater;
-        while (true) {
-            tryLoadCSV(console);
-            greater = sortedLivingObjects.higher(element);
-
-            if (greater == null) {
-                break;
-            }
-
-            ++counter;
-            livingObjects.remove(greater);
-            sortedLivingObjects.remove(greater);
-            trySaveCSV(console);
-        }
-
-        if (counter == 0) {
-            console.printWarning("no one elements have removed");
-        } else {
-            console.printf("%d elements removed", counter);
-        }
+        collection.removeGreater(jsonToLivingObject(elementString), console);
     }
 
-    /**
-     * Usage: <code>show</code><br>
-     * Shows all elements in collection
-     *
-     * @param console console object
-     */
     @CommandHandler(description = "Shows all elements from the collection")
     public void show(final Console console) {
-        tryLoadCSV(console);
-
-        livingObjects.parallelStream()
-                .map(LivingObject::toString)
-                .forEach(console::println);
+        collection.show(console);
     }
 
-    /**
-     * Usage: <code>ls</code><br>
-     * Alias for <code>show</code>
-     *
-     * @param console console object
-     */
     @CommandHandler(description = "Alias for `show`")
     public void ls(final Console console) {
-        show(console);
+        collection.show(console);
     }
 
-    /**
-     * Usage: <code>load</code><br>
-     * Loads collection from file
-     */
     @CommandHandler(description = "Loads collection from file")
     public void load(final Console console) {
-        try {
-            loadCSV();
-
-            console.printf("Saved in %s\n", filename);
-        } catch (FileNotFoundException ignored) {
-        } catch (Throwable e) {
-            console.printf("Unexpected error: %s\n", e.getMessage());
-        }
+        collection.load(console);
     }
 
-    /**
-     * Usage: <code>save</code><br>
-     * Saves collection to file
-     */
     @CommandHandler(description = "Saves collection to file")
     public void save(final Console console) {
-        try {
-            saveCSV();
-
-            console.printf("Saved in %s\n", filename);
-        } catch (Throwable e) {
-            console.printf("Unexpected error: %s\n", e.getMessage());
-        }
+        collection.save(console);
     }
 
-    /**
-     * Usage: <code>info</code><br>
-     * Prints information about collection
-     *
-     * @param console console object
-     */
     @CommandHandler(description = "Prints information about collection")
     public void info(final Console console) {
-        tryLoadCSV(console);
-
-        console.printf("Elements in collection: %d\n", livingObjects.size());
-
-        metadata.entrySet().parallelStream()
-                .forEachOrdered(field -> console.printf("%s: %s\n", field.getKey(), field.getValue()));
+        collection.info(console);
     }
 
-    /**
-     * Usage: <code>remove_lower &lt;element&gt;</code><br>
-     * Removes all lower than provided element elements from collection.<br>
-     * Element represents in JSON and must have a 'name' field
-     *
-     * @param elementString element in JSON
-     * @param console console object
-     */
     @CommandHandler(
             usage = "remove_lower <element>",
             description = "Removes all lower than provided element elements from collection.\n" +
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove_lower(final String elementString, final Console console) {
-        final LivingObject element = jsonToLivingObject(elementString);
-
-        int counter = 0;
-        LivingObject lower;
-        while (true) {
-            tryLoadCSV(console);
-            lower = sortedLivingObjects.lower(element);
-
-            if (lower == null) {
-                break;
-            }
-
-            ++counter;
-            livingObjects.remove(lower);
-            sortedLivingObjects.remove(lower);
-            trySaveCSV(console);
-        }
-
-        if (counter == 0) {
-            console.printWarning("no one elements have removed");
-        } else {
-            console.printf("%d elements removed", counter);
-        }
+        collection.removeLower(jsonToLivingObject(elementString), console);
     }
 
-    /**
-     * Usage: <code>remove &lt;element&gt;</code><br>
-     * Removes element from collection.<br>
-     * Element represents in JSON and must have a 'name' field
-     *
-     * @param elementString element in JSON
-     * @param console console object
-     */
     @CommandHandler(
             usage = "remove <element>",
             description = "Removes element from collection.\n" +
                     "Element represents in JSON and must have a 'name' field"
     )
     public void remove(final String elementString, final Console console) {
-        final LivingObject element = jsonToLivingObject(elementString);
-
-        tryLoadCSV(console);
-        if (!livingObjects.contains(element)) {
-            console.printWarning("specified element isn't contains in collection");
-            return;
-        }
-
-        livingObjects.remove(element);
-        sortedLivingObjects.remove(element);
-        trySaveCSV(console);
+        collection.remove(jsonToLivingObject(elementString), console);
     }
 
-    /**
-     * Usage: <code>help</code><br>
-     * Shows available commands
-     *
-     * @param console console object
-     */
     @CommandHandler(usage = "help [command]", description = "Shows available commands or description of provided command")
     public void help(final Console console) {
         console.printHelp(new String[0]);
     }
 
-    /**
-     * Usage: <code>help &lt;command&gt;</code><br>
-     * Shows description of provided command
-     *
-     * @param command command
-     * @param console console object
-     */
     @CommandHandler
     public void help(final String command, final Console console) {
-        console.printHelp(new String[] { command });
+        console.printHelp(arrayOf(command));
     }
 
-    /**
-     * Usage: <code>exit</code><br>
-     * Exit
-     *
-     * @param console console object
-     */
     @CommandHandler(description = "Exit")
     public void exit(final Console console) {
         console.quit();
     }
-
-    private void tryLoadCSV(final Console console) {
-        try {
-            loadCSV();
-        } catch (FileNotFoundException ignored) {
-        } catch (Throwable e) {
-            console.printWarning("an error occurred while loading data from file");
-        }
-    }
-
-    private void trySaveCSV(final Console console) {
-        try {
-            saveCSV();
-        } catch (Throwable e) {
-            console.printWarning("an error occurred while saving data to file");
-        }
-    }
-
-    private void loadCSV() throws FileNotFoundException {
-        final File file = new File(Objects.requireNonNull(filename));
-
-        if (!file.exists()) {
-            throw new FileNotFoundException("file " + filename + " isn't exists");
-        }
-
-        String exception = "an error occurred while csv file reading";
-        final Map<String, String> metadata = Collections.synchronizedMap(new HashMap<>());
-        final Set<LivingObject> livingObjects = Collections.synchronizedSet(new HashSet<>());
-        final NavigableSet<LivingObject> sortedLivingObjects = Collections.synchronizedNavigableSet(new TreeSet<>());
-        try {
-            final LivingObjectCSVReader reader =
-                    new LivingObjectCSVReader(new CSVReaderWithHeader(new CSVReader(new Scanner(file))));
-
-            metadata.putAll(reader.getMetadata());
-            metadata.put("Collection type", "HashSet");
-
-            for (LivingObject object: reader) {
-                livingObjects.add(object);
-                sortedLivingObjects.add(object);
-            }
-
-            this.metadata.clear();
-            this.metadata.putAll(metadata);
-            this.livingObjects.clear();
-            this.livingObjects.addAll(livingObjects);
-            this.sortedLivingObjects.clear();
-            this.sortedLivingObjects.addAll(sortedLivingObjects);
-        } catch (Throwable e) {
-            if (e.getMessage() != null) {
-                throw new IllegalArgumentException(exception + ", " + e.getMessage(), e);
-            }
-
-            throw new IllegalArgumentException(exception, e);
-        }
-    }
-
-    private void saveCSV() throws IOException {
-        final LivingObjectCSVWriter writer =
-                new LivingObjectCSVWriter(new CSVWriterWithHeader(new CSVWriter(new FileWriter(filename))));
-
-        metadata.entrySet().parallelStream().forEachOrdered(throwing().consumer(meta ->
-                writer.writeMetadata(meta.getKey(), meta.getValue())));
-        livingObjects.parallelStream().forEachOrdered(throwing().consumer(writer::write));
-    }
-
 }
