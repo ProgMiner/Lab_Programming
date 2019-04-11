@@ -6,11 +6,10 @@
   - [X] New command runners
   - [ ] Packets
     - [X] Packet classes
-    - [ ] Sending
-      - [X] Command runner
-      - [ ] Console
+    - [X] Sending
     - [ ] Receiving
-    - [ ] Processing
+      - [ ] Extract collection from main class
+      - [ ] Processing
   - [ ] ...
   - [ ] Done!
 

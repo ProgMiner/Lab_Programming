@@ -14,16 +14,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.channels.DatagramChannel;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.*;
+import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
+import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
 import static ru.byprogminer.Lab6_Programming.Main.PART_SIZE;
 
 public class Main {
@@ -41,32 +38,8 @@ public class Main {
     private String filename = null;
 
     public static void main(final String[] args) {
-        try {
-            ClassLoader.getSystemClassLoader().loadClass("com.alibaba.fastjson.JSON");
-        } catch (ClassNotFoundException e) {
-            // Try to load fastjson.jar if it isn't loaded already
-
-            try {
-                URLClassLoader classLoader = (URLClassLoader) ClassLoader.getSystemClassLoader();
-
-                Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-                method.setAccessible(true);
-
-                File dir = new File(".");
-                Arrays.stream(Objects.requireNonNull(dir.listFiles((file, s) ->
-                        s.contains("fastjson") && s.endsWith(".jar")))).parallel()
-                        .forEach(throwing().consumer(jar -> method.invoke(classLoader, jar.toURI().toURL())));
-            } catch (Throwable ignored) {}
-
-            try {
-                ClassLoader.getSystemClassLoader().loadClass("com.alibaba.fastjson.JSON");
-            } catch (ClassNotFoundException e1) {
-                System.err.println("Cannot start without fastjson.jar");
-                System.exit(3);
-            }
-        }
-
         // Check is argument provided
+
         if (args.length < 1) {
             System.err.println("Filename is not provided");
             System.err.println(USAGE);
@@ -149,14 +122,6 @@ public class Main {
     }
 
     private Main() {}
-
-    public List<LivingObject> getLivingObjects() {
-        try {
-            loadCSV();
-        } catch (Throwable ignored) {}
-
-        return livingObjects.parallelStream().collect(Collectors.toList());
-    }
 
     /**
      * Usage: <code>add &lt;element&gt;</code><br>
@@ -294,7 +259,7 @@ public class Main {
         console.printf("Elements in collection: %d\n", livingObjects.size());
 
         metadata.entrySet().parallelStream()
-                .forEach(field -> console.printf("%s: %s\n", field.getKey(), field.getValue()));
+                .forEachOrdered(field -> console.printf("%s: %s\n", field.getKey(), field.getValue()));
     }
 
     /**

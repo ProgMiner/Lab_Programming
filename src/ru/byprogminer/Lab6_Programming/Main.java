@@ -29,6 +29,7 @@ public class Main {
     private final static CallableCommandRunner commandRunner = new CallableCommandRunner();
 
     private volatile static UDPSocket<DatagramPacket> socket = null;
+    private volatile static Console console = null;
 
     static {
         commandRunner
@@ -121,17 +122,10 @@ public class Main {
             return;
         }
 
-        new Thread(() -> {
-            while (!udpSocket.isClosed()) {
-                try {
-                    final Packet packet = udpSocket.receive(Packet.class, 600000);
+        System.out.println("Connected successfully");
 
-                    // TODO
-                } catch (InterruptedException | SocketTimeoutException e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
+        console = new Console(commandRunner);
+        console.exec();
 
         try {
             while (!udpSocket.isClosed()) {
@@ -162,6 +156,30 @@ public class Main {
                 socket.send(packet.apply(args));
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+
+            while (!socket.isClosed()) {
+                try {
+                    final Packet.Response response = socket.receive(Packet.Response.class, 60000);
+
+                    switch (response.getStatus()) {
+                        case ERR:
+                            console.printError(response.getContent());
+                            break;
+                        case WARN:
+                            console.printWarning(response.getContent());
+                            break;
+                        case OK:
+                            console.println(response.getContent());
+                            break;
+                    }
+
+                    break;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } catch (SocketTimeoutException e) {
+                    System.out.println("It looks like the server is unavailable.");
+                }
             }
         };
     }

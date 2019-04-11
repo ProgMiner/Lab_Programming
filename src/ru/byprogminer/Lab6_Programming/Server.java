@@ -1,15 +1,11 @@
 package ru.byprogminer.Lab6_Programming;
 
 import ru.byprogminer.Lab5_Programming.Main;
-import ru.byprogminer.Lab5_Programming.command.Console;
-import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
+import ru.byprogminer.Lab6_Programming.Packet.Request;
 import ru.byprogminer.Lab6_Programming.udp.UDPServerSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.io.PrintStream;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
@@ -50,7 +46,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
             try {
                 while (!socket.isClosed()) {
                     try {
-                        final Packet packet = socket.receive(Packet.class, 500);
+                        final Request packet = socket.receive(Request.class, 600000);
 
                         // TODO
                     } catch (SocketTimeoutException ignored) {

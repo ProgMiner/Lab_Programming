@@ -347,7 +347,7 @@ public abstract class UDPSocket<D> implements Closeable {
      *
      * @throws SocketTimeoutException if time is out
      */
-    public final <T> T receive(Class<T> clazz, long timeout) throws InterruptedException, SocketTimeoutException {
+    public final <T> T receive(Class<? extends T> clazz, long timeout) throws InterruptedException, SocketTimeoutException {
         assertNotClosed();
 
         while (true) {

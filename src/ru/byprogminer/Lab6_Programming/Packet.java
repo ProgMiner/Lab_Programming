@@ -77,7 +77,15 @@ public abstract class Packet implements Serializable {
 
         public enum Status {
 
-            OK, WARN, ERR
+            OK, WARN, ERR;
+
+            public Status update(Status next) {
+                if (next.ordinal() < ordinal()) {
+                    return this;
+                }
+
+                return next;
+            }
         }
 
         private final String content;
