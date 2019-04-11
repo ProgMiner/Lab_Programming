@@ -16,6 +16,8 @@ import java.util.Formatter;
 
 public class Server<C extends DatagramChannel> implements Runnable {
 
+    public final static long CLIENT_TIMEOUT = 10000;
+
     private final C channel;
     private final UDPServerSocket<C> serverSocket;
     private final CollectionManager collection;
@@ -51,7 +53,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                 @Override
                 public void print(Object text) {
                     try {
-                        socket.send(new Response.Message(text.toString(), Response.Message.Status.OK));
+                        socket.send(new Response.Message(text.toString(), Response.Message.Status.OK), CLIENT_TIMEOUT);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -59,7 +61,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
 
                 @Override
                 public void println(Object text) {
-                    print(text.toString() + '\n');
+                    printf("%s\n", text);
                 }
 
                 @Override
@@ -72,7 +74,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                 @Override
                 public void printWarning(Object text) {
                     try {
-                        socket.send(new Response.Message(text.toString(), Response.Message.Status.WARN));
+                        socket.send(new Response.Message(text.toString(), Response.Message.Status.WARN), CLIENT_TIMEOUT);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -81,7 +83,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                 @Override
                 public void printError(Object text) {
                     try {
-                        socket.send(new Response.Message(text.toString(), Response.Message.Status.ERR));
+                        socket.send(new Response.Message(text.toString(), Response.Message.Status.ERR), CLIENT_TIMEOUT);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -91,7 +93,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
             try {
                 while (!socket.isClosed()) {
                     try {
-                        final Request packet = socket.receive(Request.class, 600000);
+                        final Request packet = socket.receive(Request.class, CLIENT_TIMEOUT);
 
                         if (packet instanceof Request.Add) {
                             collection.add(((Request.Add) packet).getElement(), printer);
@@ -113,7 +115,7 @@ public class Server<C extends DatagramChannel> implements Runnable {
                             // TODO
                         }
 
-                        socket.send(new Response.Done());
+                        socket.send(new Response.Done(), CLIENT_TIMEOUT);
                     } catch (SocketTimeoutException ignored) {
                     } catch (Throwable e) {
                         e.printStackTrace();

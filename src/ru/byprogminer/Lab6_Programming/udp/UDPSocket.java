@@ -289,8 +289,9 @@ public abstract class UDPSocket<D> implements Closeable {
      * @param object object to send
      *
      * @throws IllegalStateException if socket isn't connected
+     * @throws SocketTimeoutException if time is out
      */
-    public final void send(Object object) throws IOException {
+    public final void send(Object object, long timeout) throws IOException {
         if (remote == null) {
             throw new IllegalStateException("socket isn't connected");
         }
@@ -306,7 +307,9 @@ public abstract class UDPSocket<D> implements Closeable {
             final int count = BigDecimal.valueOf(objectBuffer.remaining()).divide(packetSize, 0, RoundingMode.UP)
                     .toBigInteger().subtract(BigInteger.ONE).and(BigInteger.valueOf(0xFF)).intValue();
 
-            for (int i = 0; i <= count; ++i) {
+            int i;
+            final long start = System.currentTimeMillis();
+            for (i = 0; i <= count && System.currentTimeMillis() - start < timeout; ++i) {
                 final ByteBuffer packet;
                 final Long hash;
 
@@ -320,7 +323,7 @@ public abstract class UDPSocket<D> implements Closeable {
 
                 packet.rewind();
                 sendDatagram(packet);
-                while (receiver.expectedConfirmations.contains(hash)) {
+                while (receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
                     try {
                         Thread.yield();
                         Thread.sleep(RESEND_DELAY);
@@ -332,6 +335,10 @@ public abstract class UDPSocket<D> implements Closeable {
                     sendDatagram(packet);
                 }
             }
+
+            if (i <= count) {
+                throw new SocketTimeoutException("sending is timed out");
+            }
         }
     }
 
@@ -341,7 +348,6 @@ public abstract class UDPSocket<D> implements Closeable {
      * @param <T> type of object
      *
      * @param clazz class of type of object
-     * @param timeout timeout
      *
      * @return object
      *
@@ -354,7 +360,7 @@ public abstract class UDPSocket<D> implements Closeable {
             final Object object = receiver.receivedObjects.poll(timeout, TimeUnit.MILLISECONDS);
 
             if (object == null) {
-                throw new SocketTimeoutException("timed out");
+                throw new SocketTimeoutException("receiving is timed out");
             }
 
             if (clazz.isInstance(object)) {

@@ -9,10 +9,7 @@ import ru.byprogminer.Lab6_Programming.udp.SocketUDPSocket;
 import ru.byprogminer.Lab6_Programming.udp.UDPSocket;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.function.Function;
@@ -32,6 +29,7 @@ public class Main {
 
     private final static CallableCommandRunner commandRunner = new CallableCommandRunner();
 
+    private volatile static SocketAddress address = null;
     private volatile static UDPSocket<?> socket = null;
     private volatile static Console console = null;
 
@@ -99,25 +97,13 @@ public class Main {
         try {
             final int port = Integer.parseInt(args[0]);
 
-            final SocketAddress address;
             if (args.length > 1) {
                 address = new InetSocketAddress(args[1], port);
             } else {
                 address = new InetSocketAddress(port);
             }
 
-            final DatagramSocket datagramSocket = new DatagramSocket();
-            datagramSocket.setSoTimeout(3000);
-
-            socket = new SocketUDPSocket<>(datagramSocket, PART_SIZE);
-
-            do {
-                try {
-                    socket.connect(address, CONNECT_DELAY);
-                } catch (SocketTimeoutException e) {
-                    System.out.println("Server is unavailable. Retry");
-                }
-            } while (!socket.isConnected());
+            connect();
         } catch (Throwable e) {
             System.err.printf("Execution error: %s\n", e.getMessage());
             System.err.println(USAGE);
@@ -151,37 +137,60 @@ public class Main {
             assertSocketCreated();
 
             try {
-                socket.send(packet.apply(args));
+                socket.send(packet.apply(args), Server.CLIENT_TIMEOUT);
+
+                while (!socket.isClosed()) {
+                    try {
+                        final Response response = socket.receive(Response.class, Server.CLIENT_TIMEOUT);
+
+                        if (response instanceof Response.Message) {
+                            switch (((Response.Message) response).getStatus()) {
+                                case ERR:
+                                    console.printError(((Response.Message) response).getContent());
+                                    break;
+                                case WARN:
+                                    console.printWarning(((Response.Message) response).getContent());
+                                    break;
+                                case OK:
+                                    console.print(((Response.Message) response).getContent());
+                                    break;
+                            }
+                        } else if (response instanceof Response.Done) {
+                            break;
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } catch (SocketTimeoutException e) {
+                try {
+                    System.out.println("It looks like the server is unavailable. Reconnect");
+
+                    connect();
+
+                    System.out.println("Reconnected");
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
-            while (!socket.isClosed()) {
-                try {
-                    final Response response = socket.receive(Response.class, 60000);
-
-                    if (response instanceof Response.Message) {
-                        switch (((Response.Message) response).getStatus()) {
-                            case ERR:
-                                console.printError(((Response.Message) response).getContent());
-                                break;
-                            case WARN:
-                                console.printWarning(((Response.Message) response).getContent());
-                                break;
-                            case OK:
-                                console.print(((Response.Message) response).getContent());
-                                break;
-                        }
-                    } else if (response instanceof Response.Done) {
-                        break;
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (SocketTimeoutException e) {
-                    System.out.println("It looks like the server is unavailable.");
-                }
-            }
         };
+    }
+
+    private static void connect() throws IOException {
+        final DatagramSocket datagramSocket = new DatagramSocket();
+        datagramSocket.setSoTimeout(3000);
+
+        socket = new SocketUDPSocket<>(datagramSocket, PART_SIZE);
+
+        do {
+            try {
+                socket.connect(address, CONNECT_DELAY);
+            } catch (SocketTimeoutException e) {
+                System.out.println("Server is unavailable. Retry");
+            }
+        } while (!socket.isConnected());
     }
 
     private static Invokable sendSimple(Class<? extends Packet> packetType) {

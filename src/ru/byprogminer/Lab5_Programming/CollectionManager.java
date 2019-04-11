@@ -84,9 +84,9 @@ public class CollectionManager {
     public void show(final StatusPrinter printer) {
         tryLoadCSV(printer);
 
-        livingObjects.stream()
-                .map(LivingObject::toString)
-                .forEachOrdered(printer::println);
+        try {
+            Collections.unmodifiableSet(livingObjects).parallelStream().forEach(printer::println);
+        } catch (ConcurrentModificationException ignored) {}
     }
 
     /**
