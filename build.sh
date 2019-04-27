@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script for building lab works of Programming discipline at SEaCS ITMO
+# Script for building lab works of Programming discipline at SEaCS ITMO on Helios
 
 # MIT License
 #
@@ -28,7 +28,7 @@
 LAB_NAME='lab7'
 
 # Array of external libs' JARs
-LAB_LIBS=('fastjson.jar')
+LAB_LIBS=($(echo libs/* | while read lib ; do echo "$lib" ; done))
 
 # Array of entry points for compilation (e.g. main classes)
 LAB_ENTRIES=(
