@@ -76,6 +76,9 @@ CMD_JAVADOC='javadoc18'
 # Command for start `jar`
 CMD_JAR='jar'
 
+# Command for start GNU find
+CMD_FIND='gfind'
+
 
 # Internal variables
 
@@ -128,7 +131,7 @@ done
 
 # Make JavaDocs
 "$CMD_JAVADOC" -sourcepath "$SRC_DIR" -d "$DOC_DIR" -classpath "$classpath" \
-    $(find "$SRC_DIR" -type d | while read pkg ; do pkg="${pkg/$SRC_DIR\//}" ; echo "${pkg////.}" ; done)
+    $("$CMD_FIND" "$SRC_DIR" -type d | while read pkg ; do if [[ -n "$("$CMD_FIND" "$pkg" -type f -maxdepth 1)" ]] ; then pkg="${pkg/$SRC_DIR\//}" ; echo "${pkg////.}" ; fi ; done)
 [[ $? -ne 0 ]] && warn 'An error occurred while making a JavaDoc'
 
 # Upload JavaDocs to web
