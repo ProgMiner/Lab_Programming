@@ -88,19 +88,21 @@ public class Main {
             System.exit(3);
         }
 
-        while (true) {
-            console.exec();
+        try {
+            while (true) {
+                console.exec();
 
-            try {
-                main.collection.saveCSV();
+                try {
+                    main.collection.saveCSV();
 
-                break;
-            } catch (IOException e) {
-                console.printError("an error occurred while file saving");
+                    break;
+                } catch (IOException e) {
+                    console.printError("an error occurred while file saving");
+                }
             }
+        } finally {
+            System.exit(0);
         }
-
-        System.exit(0);
     }
 
     private Main(CollectionManager collection) {

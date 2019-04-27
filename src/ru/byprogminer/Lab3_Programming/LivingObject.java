@@ -3,23 +3,20 @@ package ru.byprogminer.Lab3_Programming;
 import ru.byprogminer.Lab4_Programming.DeathException;
 import ru.byprogminer.Lab4_Programming.NotFoundException;
 
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class LivingObject extends Object implements Hitter, Picker, Movable, Thinkable, Comparable<LivingObject> {
 
+    private final static String STRING_FORMAT = "LivingObject %s with volume %s at (%s, %s, %s) created %s, currently %s, %s";
+
     private final Set<Object> items = new HashSet<>();
 
     private volatile boolean lives = true;
 
-    public LivingObject(
-            final String name,
-            final double volume,
-            final Date creatingTime
-    ) {
-        super(name, volume, creatingTime);
+    public LivingObject(final String name) {
+        super(name);
     }
 
     public Set<Object> getItems() {
@@ -36,7 +33,7 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
         return lives;
     }
 
-    protected void checkLives() {
+    protected void assertLives() {
         if (!lives) {
             throw new DeathException(this);
         }
@@ -44,56 +41,56 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
 
     @Override
     public void moveTo(Object target, Move move) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s %s к объекту %s.\n", getName(), move.getActionName(), target.getName());
     }
 
     @Override
     public void moveTo(String target, Move move) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s %s к %s.\n", getName(), move.getActionName(), target);
     }
 
     @Override
     public void moveFor(Object target, Move move) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s %s за %s.\n", getName(), move.getActionName(), target.getName());
     }
 
     @Override
     public void moveFrom(Object enemy, Move move) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s %s от %s.\n", getName(), move.getActionName(), enemy.getName());
     }
 
     @Override
     public void moveFrom(String enemy, Move move) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s %s от %s.\n", getName(), move.getActionName(), enemy);
     }
 
     @Override
     public void hit(Object target) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s бьёт %s.\n", getName(), target.getName());
     }
 
     @Override
     public void hit(Object target, Object by) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s бьёт %s с помощью объекта %s.\n", getName(), target.getName(), by.getName());
     }
 
     @Override
     public void pickUp(Object thing) {
-        checkLives();
+        assertLives();
 
         if (items.contains(thing)) {
             return;
@@ -115,14 +112,14 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
 
     @Override
     public void thinkAbout(Object thing) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s думает об объекте %s.\n", getName(), thing.getName());
     }
 
     @Override
     public void think(String thought) {
-        checkLives();
+        assertLives();
 
         System.out.printf("%s думает %s.\n", getName(), thought);
     }
@@ -162,38 +159,22 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
     }
 
     @Override
-    public boolean equals(java.lang.Object object) {
-        if (!(object instanceof LivingObject)) {
+    public boolean equals(java.lang.Object that) {
+        if (!(that instanceof LivingObject)) {
             return false;
         }
 
-        LivingObject obj = (LivingObject) object;
-
-        if (!obj.getName().equals(this.getName())) {
-            return false;
-        }
-
-        if (obj.lives != this.lives) {
-            return false;
-        }
-
-        if (obj.items.size() != this.items.size()) {
-            return false;
-        }
-
-        return this.items.containsAll(obj.items);
+        LivingObject obj = (LivingObject) that;
+        return super.equals(obj) && lives == obj.lives && items.equals(obj.items);
     }
 
     @Override
     public String toString() {
-        return "LivingObject " + getName() + ' ' +
-                "at (" + getX() + ", "
-                + getY() + ", "
-                + getZ() + ") " +
-                "with volume " + getVolume() + ", " +
-                "created at " + getCreatingTime() + ", " +
-                "that is currently " + (lives ? "lives" : "dead") + ", " +
-                "with following items: " + items.parallelStream().map(Object::toString)
-                .collect(Collectors.joining(", "));
+        return String.format(STRING_FORMAT,
+                getName(), getVolume(), getX(), getY(), getZ(),
+                getCreatingTime().format(DATE_TIME_FORMATTER),
+                lives ? "lives" : "dead", items.isEmpty() ? "without items" :
+                        "with items:\n    " + items.parallelStream().map(Object::toString)
+                                .collect(Collectors.joining("\n    ")));
     }
 }

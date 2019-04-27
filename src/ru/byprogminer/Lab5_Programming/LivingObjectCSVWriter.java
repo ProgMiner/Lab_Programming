@@ -5,6 +5,7 @@ import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab5_Programming.csv.CSVWriterWithHeader;
 
 import java.io.IOException;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -65,7 +66,7 @@ public class LivingObjectCSVWriter {
 
         writeRow(type, id, "name", object.getName());
         writeRow(type, id, "volume", object.getVolume());
-        writeRow(type, id, "creatingTime", object.getCreatingTime().getTime());
+        writeRow(type, id, "creatingTime", object.getCreatingTime().toString());
         writeRow(type, id, "x", object.getX());
         writeRow(type, id, "y", object.getY());
         writeRow(type, id, "z", object.getZ());

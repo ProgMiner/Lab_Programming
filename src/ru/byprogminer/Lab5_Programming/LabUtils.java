@@ -7,8 +7,10 @@ import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab5_Programming.throwing.Throwing;
 
 import java.lang.reflect.Field;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
@@ -21,7 +23,7 @@ public final class LabUtils {
 
     interface ObjectConstructor <T extends Object> {
 
-        T construct(String name, Double volume, Date creatingTime);
+        T construct(String name);
     }
 
     private LabUtils() {}
@@ -31,25 +33,35 @@ public final class LabUtils {
         String cause = "an error occurred while object constructing";
 
         try {
-            cause = "object name is not provided";
+            cause = "object's name is not provided";
             final String name = Objects.requireNonNull(map.get("name"));
 
-            cause = "object volume is not provided or have bad format";
-            final Double volume = Double.parseDouble(map.get("volume"));
-
-            cause = "object creating time is not provided or have bad format";
-            final Date creatingTime = new Date(Long.parseLong(map.get("creatingTime")));
-
             cause = "an error occurred while object constructing";
-            final T object = constructor.construct(name, volume, creatingTime);
+            final T object = constructor.construct(name);
 
-            cause = "object x have bad format";
+            cause = "object's volume has bad format";
+            callIfNotNull(map.get("volume"), s -> object.setVolume(Double.parseDouble(s)));
+
+            cause = "object's creating time has bad format";
+            callIfNotNull(map.get("creatingTime"), s -> {
+                LocalDateTime creatingTime;
+
+                try {
+                    creatingTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(s)), ZoneId.systemDefault());
+                } catch (Throwable e) {
+                    creatingTime = LocalDateTime.parse(s);
+                }
+
+                callIfNotNull(creatingTime, object::setCreatingTime);
+            });
+
+            cause = "object's x has bad format";
             callIfNotNull(map.get("x"), s -> object.setX(Double.parseDouble(s)));
 
-            cause = "object y have bad format";
+            cause = "object's y has bad format";
             callIfNotNull(map.get("y"), s -> object.setY(Double.parseDouble(s)));
 
-            cause = "object z have bad format";
+            cause = "object's z has bad format";
             callIfNotNull(map.get("z"), s -> object.setZ(Double.parseDouble(s)));
 
             return object;
@@ -58,12 +70,12 @@ public final class LabUtils {
         }
     }
 
-    public static Object objectConstructor(String name, Double volume, Date creatingTime) {
-        return new Object(name, volume, creatingTime) {};
+    public static Object objectConstructor(String name) {
+        return new Object(name) {};
     }
 
-    public static LivingObject livingObjectConstructor(String name, Double volume, Date creatingTime) {
-        return new LivingObject(name, volume, creatingTime) {};
+    public static LivingObject livingObjectConstructor(String name) {
+        return new LivingObject(name) {};
     }
 
     public static void setLivingObjectLives(final LivingObject object, final Boolean lives) {
