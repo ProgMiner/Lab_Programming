@@ -53,13 +53,13 @@ LAB_JARS=(
 )
 
 # Name of sources' directory in the lab's directory
-SRC_DIR="src"
+SRC_DIR='src'
 
 # Name of binaries' directory in the lab's directory
-BIN_DIR="bin"
+BIN_DIR='bin'
 
 # Name of docs' directory in the lab's directory
-DOC_DIR="doc"
+DOC_DIR='doc'
 
 # Lab's directory
 LAB_PATH="$(cd ~ && pwd)/$LAB_NAME"
@@ -68,13 +68,13 @@ LAB_PATH="$(cd ~ && pwd)/$LAB_NAME"
 WEB_PATH="$(cd ~/public_html && pwd)"
 
 # Command for start `javac`
-CMD_JAVAC="javac18"
+CMD_JAVAC='javac18'
 
 # Command for start `javadoc`
-CMD_JAVADOC="javadoc18"
+CMD_JAVADOC='javadoc18'
 
 # Command for start `jar`
-CMD_JAR="jar"
+CMD_JAR='jar'
 
 
 # Internal variables
@@ -85,7 +85,7 @@ warns=()
 # Functions
 
 # https://stackoverflow.com/questions/1527049/how-can-i-join-elements-of-an-array-in-bash
-function join_by {
+function join_by() {
     local IFS="$1"
     shift
 
