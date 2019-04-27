@@ -1,1 +1,1 @@
-Class-Path: fastjson.jar
+Class-Path: libs/fastjson.jar
