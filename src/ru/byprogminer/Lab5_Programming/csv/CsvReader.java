@@ -5,11 +5,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
-public class CSVReader implements Iterable<List<String>>, Iterator<List<String>> {
+public class CsvReader implements Iterable<List<String>>, Iterator<List<String>> {
 
     private final Scanner scanner;
 
-    public CSVReader(Scanner scanner) {
+    public CsvReader(Scanner scanner) {
         this.scanner = scanner;
     }
 

@@ -30,10 +30,15 @@ LAB_NAME='lab7'
 # Array of external libs' JARs
 LAB_LIBS=($(echo libs/* | while read lib ; do echo "$lib" ; done))
 
+# BRE pattern for resource files in sources directory
+LAB_RES='\.properties$'
+
 # Array of entry points for compilation (e.g. main classes)
 LAB_ENTRIES=(
-    'ru.byprogminer.Lab5_Programming.Main'
+    'ru.byprogminer.Lab7_Programming.ServerMain'
     'ru.byprogminer.Lab6_Programming.Main'
+
+    'ru.byprogminer.Lab7_Programming.logging.Formatter'
 )
 
 # Array of building JAR artifacts
@@ -48,7 +53,7 @@ LAB_ENTRIES=(
 #
 # !!! Files in additional arguments have to specified relative to $LAB_PATH/$BIN_DIR !!!
 LAB_JARS=(
-    'me' 'lab6_server.jar' 2 '../manifest.mf' 'ru.byprogminer.Lab5_Programming.Main'
+    'me' 'lab7_server.jar' 2 '../manifest.mf' 'ru.byprogminer.Lab7_Programming.ServerMain'
     'me' 'lab6_client.jar' 2 '../manifest.mf' 'ru.byprogminer.Lab6_Programming.Main'
 )
 
@@ -121,8 +126,15 @@ function die() {
 cd "$LAB_PATH"
 [[ $? -ne 0 ]] && die "It seems like there isn't the lab's directory"
 
-# Compile files
 mkdir -p bin
+
+# Copy resources
+"$CMD_FIND" "$SRC_DIR" -type f |
+    grep "$LAB_RES" | while read file ; do
+        cp "$file" "${file/$SRC_DIR/$BIN_DIR}"
+    done
+
+# Compile files
 classpath="$(join_by ':' "${LAB_LIBS[@]}")"
 for entry in "${LAB_ENTRIES[@]}" ; do
     "$CMD_JAVAC" -cp "$classpath" -sourcepath "$SRC_DIR" -d "$BIN_DIR" "$SRC_DIR/${entry//.//}.java"

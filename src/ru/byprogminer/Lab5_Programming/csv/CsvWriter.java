@@ -5,17 +5,17 @@ import java.io.Writer;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CSVWriter extends Writer {
+public class CsvWriter extends Writer {
 
     private final Writer writer;
 
-    public CSVWriter(Writer writer) {
+    public CsvWriter(Writer writer) {
         this.writer = writer;
     }
 
     public void write(List<String> row) throws IOException {
         writer.append(row.parallelStream()
-                .map(CSVWriter::prepareValue)
+                .map(CsvWriter::prepareValue)
                 .collect(Collectors.joining(",")))
                 .append('\n');
         writer.flush();

@@ -49,14 +49,14 @@ public abstract class ListCommandRunner extends CommandRunner {
     }
 
     @Override
-    public final String getUsage(final String name) {
+    public final String getUsage(final String name) throws NullPointerException {
         return usages.get(Objects.requireNonNull(name));
     }
 
     @Override
     public final Integer[] getArgumentsCount(final String name) {
         return commands.get(Objects.requireNonNull(name))
-                .keySet().toArray(new Integer[0]);
+                .keySet().toArray(arrayOf());
     }
 
     @Override
@@ -69,22 +69,28 @@ public abstract class ListCommandRunner extends CommandRunner {
         final Map<Integer, Invokable> c = commands.get(command);
 
         if (c == null) {
-            throw new CommandPerformException(command, args.toArray(arrayOf()), new UnsupportedOperationException("unknown command " + command));
+            throw new CommandPerformException(command, args.toArray(arrayOf()), new IllegalArgumentException("unknown command " + command));
         }
 
         Invokable invokable = c.get(args.size());
         if (invokable == null) {
-            throw new CommandPerformException(command, args.toArray(arrayOf()), new UnsupportedOperationException("illegal count of arguments"));
+            throw new CommandPerformException(command, args.toArray(arrayOf()), new IllegalArgumentException("illegal count of arguments"));
         }
 
         try {
-            invokable.invoke(args.toArray());
+            invokable.invoke(args.toArray(arrayOf()));
         } catch (final IllegalAccessException e) {
             throw new RuntimeException(e.getMessage(), e);
         } catch (final InvocationTargetException e) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), e.getCause());
+            Throwable cause = e.getCause();
+
+            if (cause == null) {
+                cause = e;
+            }
+
+            throw new CommandPerformException(command, args.toArray(arrayOf()), cause);
         } catch (final Throwable e) {
-            throw new CommandPerformException(command, args.toArray(new String[0]), e);
+            throw new CommandPerformException(command, args.toArray(arrayOf()), e);
         }
     }
 

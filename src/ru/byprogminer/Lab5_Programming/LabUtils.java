@@ -5,26 +5,33 @@ import com.alibaba.fastjson.JSONObject;
 import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab5_Programming.throwing.Throwing;
+import ru.byprogminer.Lab5_Programming.throwing.ThrowingFunction;
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import java.lang.reflect.Field;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class LabUtils {
 
-    interface ObjectConstructor <T extends Object> {
+    public interface ObjectConstructor <T extends Object> {
 
         T construct(String name);
     }
+
+    private static Logger log = Loggers.getLogger(LabUtils.class.getName());
 
     private LabUtils() {}
 
@@ -44,12 +51,22 @@ public final class LabUtils {
 
             cause = "object's creating time has bad format";
             callIfNotNull(map.get("creatingTime"), s -> {
-                LocalDateTime creatingTime;
+                LocalDateTime creatingTime = null;
 
                 try {
-                    creatingTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(s)), ZoneId.systemDefault());
-                } catch (Throwable e) {
-                    creatingTime = LocalDateTime.parse(s);
+                    creatingTime = LocalDateTime.parse(s, Object.DATE_TIME_FORMATTER);
+                } catch (Throwable ignored) {}
+
+                if (creatingTime == null) {
+                    try {
+                        creatingTime = LocalDateTime.parse(s);
+                    } catch (Throwable ignored) {}
+                }
+
+                if (creatingTime == null) {
+                    try {
+                        creatingTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(s)), ZoneId.systemDefault());
+                    } catch (Throwable ignored) {}
                 }
 
                 callIfNotNull(creatingTime, object::setCreatingTime);
@@ -66,6 +83,7 @@ public final class LabUtils {
 
             return object;
         } catch (Throwable e) {
+            log.log(Level.WARNING, cause, e);
             throw exceptionConstructor.apply(cause, e);
         }
     }
@@ -84,7 +102,7 @@ public final class LabUtils {
             livesField.setAccessible(true);
             livesField.set(object, lives);
         } catch (IllegalAccessException | NoSuchFieldException e) {
-            // TODO Logging
+            log.log(Level.SEVERE, "exception thrown while setting living object lives", e);
         }
     }
 
@@ -112,6 +130,33 @@ public final class LabUtils {
 
     public static Throwing throwing() {
         return Throwing.getThrowing();
+    }
+
+    public static Map<String, String> propertiesToMap(Properties properties) {
+        return new HashMap<>(properties).entrySet().stream()
+                .map(entry -> new HashMap.SimpleImmutableEntry<>(entry.getKey().toString(), entry.getValue().toString()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public static <T> Stream<T> mapResultSet(
+            ResultSet resultSet,
+            ThrowingFunction<ResultSet, T, SQLException> function
+    ) throws SQLException {
+        if (resultSet == null) {
+            return Stream.empty();
+        }
+
+        final List<T> ret = new LinkedList<>();
+        while (resultSet.next()) {
+            final T value = function.throwingApply(resultSet);
+
+            if (value != null) {
+                ret.add(value);
+            }
+        }
+
+        resultSet.close();
+        return ret.stream();
     }
 
     @SafeVarargs
@@ -142,11 +187,13 @@ public final class LabUtils {
 
             return livingObject;
         } catch (Throwable e) {
+            log.log(Level.WARNING, exception, e);
+
             if (e.getMessage() != null) {
-                throw new IllegalArgumentException(exception + ", " + e.getMessage());
+                throw new IllegalArgumentException(String.format("%s, %s", exception, e.getMessage()), e);
             }
 
-            throw new IllegalArgumentException(exception);
+            throw new IllegalArgumentException(exception, e);
         }
     }
 }

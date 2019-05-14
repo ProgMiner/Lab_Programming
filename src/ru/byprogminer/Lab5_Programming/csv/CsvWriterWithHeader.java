@@ -7,12 +7,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class CSVWriterWithHeader extends Writer {
+public class CsvWriterWithHeader extends Writer {
 
-    private final CSVWriter writer;
+    private final CsvWriter writer;
     private List<String> cols;
 
-    public CSVWriterWithHeader(CSVWriter writer) {
+    public CsvWriterWithHeader(CsvWriter writer) {
         this.writer = writer;
     }
 
@@ -50,7 +50,7 @@ public class CSVWriterWithHeader extends Writer {
         writer.close();
     }
 
-    public CSVWriter getWriter() {
+    public CsvWriter getWriter() {
         return writer;
     }
 

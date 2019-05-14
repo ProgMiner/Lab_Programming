@@ -1,11 +1,16 @@
 package ru.byprogminer.Lab5_Programming.command;
 
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
+
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class Console implements StatusPrinter {
@@ -18,13 +23,15 @@ public class Console implements StatusPrinter {
 
     private volatile long maxMistakeCount = 3;
 
+    private final Logger log = Loggers.getLogger(Console.class.getName());
+
     @SuppressWarnings("unchecked")
     private final Map<String, String> translator =
             (Map<String, String>) Proxy.newProxyInstance(
                     HashMap.class.getClassLoader(),
                     HashMap.class.getInterfaces(),
                     new InvocationHandler() {
-                        final Map<String, String> backingField = Collections.synchronizedMap(new HashMap<>());
+                        final Map<String, String> backingField = new ConcurrentHashMap<>();
 
                         @Override
                         public Object invoke(
@@ -35,6 +42,7 @@ public class Console implements StatusPrinter {
                             final Object ret = method.invoke(backingField, args);
 
                             if (method.getName().equals("get") && ret == null && args.length > 0 && args[0] != null) {
+                                log.info(String.format("Called undefined translation for %s", args[0]));
                                 return args[0].toString() + '\n';
                             }
 
@@ -67,8 +75,9 @@ public class Console implements StatusPrinter {
         runner.getSpecialParameterTypes().put(Console.class, this);
     }
 
-    public void exec() {
+    public void exec() throws RuntimeException {
         if (running) {
+            log.warning("Trying to run running console");
             throw new RuntimeException("this console is running already");
         }
 
@@ -82,45 +91,52 @@ public class Console implements StatusPrinter {
                 }
 
                 CommandPerformException cpe = null;
+                final String command = scanner.nextLine();
                 try {
                     try {
-                        runner.performCommand(scanner.nextLine());
+                        runner.performCommand(command);
                     } catch (final CommandPerformException e) {
                         final Throwable throwable = e.getCause();
                         cpe = e;
 
+                        log.log(Level.INFO, "An exception thrown while command performing", e);
                         if (throwable != null) {
                             throw throwable;
                         }
                     }
-                } catch (final IllegalArgumentException | UnsupportedOperationException e) {
+                } catch (final IllegalArgumentException e) {
                     printError(e.getMessage());
 
                     if (cpe != null) {
-                        final String usage = runner.getUsage(cpe.getCommandName());
+                        final String commandName = cpe.getCommandName();
 
+                        final String usage = runner.getUsage(commandName);
                         if (usage != null) {
                             printer.printf(translator.get("message.usage"), usage);
                         }
 
-                        final Set<String> commands = runner.getCommands();
-                        if (commands.contains(cpe.getCommandName())) {
-                            if (commands.contains("help")) {
-                                printer.printf(translator.get("help.try.command"), cpe.getCommandName());
+                        String[] commandArgs = cpe.getCommandArgs();
+                        if (!"help".equals(commandName) || commandArgs.length != 1) {
+                            final Set<String> commands = runner.getCommands();
+
+                            if (commands != null && commands.contains(commandName)) {
+                                if (commands.contains("help")) {
+                                    printer.printf(translator.get("help.try.command"), commandName);
+                                }
+                            } else {
+                                if (commands != null && commands.contains("help")) {
+                                    printer.print(translator.get("help.try"));
+                                }
+
+                                checkSpelling(commandName, commandArgs.length);
                             }
                         } else {
-                            if (commands.contains("help")) {
-                                printer.print(translator.get("help.try"));
-                            }
-
-                            checkSpelling(cpe);
+                            checkSpelling(commandArgs[0], -1);
                         }
                     }
                 } catch (final Throwable e) {
+                    log.log(Level.WARNING, String.format("An unknown error occurred while command \"%s\" performing", command), e);
                     printWarning("an error occurred while command performing");
-
-                    // TODO Logging
-                    throw new RuntimeException(e.getMessage(), e);
                 }
             }
         }
@@ -176,47 +192,51 @@ public class Console implements StatusPrinter {
         printf(translator.get("message.warning"), msg);
     }
 
-    protected void checkSpelling(final CommandPerformException cpe) {
+    protected void checkSpelling(final String commandName, int commandArgsCount) {
         if (maxMistakeCount <= 0) {
              return;
         }
 
         final SortedMap<Long, Set<String>> commands = new TreeMap<>();
         for (final String command: runner.getCommands()) {
-            final long[][] dynamic = new long[command.length() + 1][cpe.getCommandName().length() + 1];
+            final long[][] dynamic = new long[command.length() + 1][commandName.length() + 1];
 
             for (int i = 0; i <= command.length(); ++i) {
                 dynamic[i][0] = i;
             }
 
-            for (int i = 1; i <= cpe.getCommandName().length(); ++i) {
+            for (int i = 1; i <= commandName.length(); ++i) {
                 dynamic[0][i] = i;
             }
 
             for (int i = 1; i <= command.length(); ++i) {
-                for (int j = 1; j <= cpe.getCommandName().length(); ++j) {
+                for (int j = 1; j <= commandName.length(); ++j) {
                     dynamic[i][j] = Math.min(
                             Math.min(dynamic[i - 1][j] + (command.charAt(i - 1) == '_' ? 0 : 1), dynamic[i][j - 1] + 1),
-                            dynamic[i - 1][j - 1] + (command.charAt(i - 1) == cpe.getCommandName().charAt(j - 1) ? 0 : 1)
+                            dynamic[i - 1][j - 1] + (command.charAt(i - 1) == commandName.charAt(j - 1) ? 0 : 1)
                     );
 
                     if (i >= 2 && j >= 2) {
                         dynamic[i][j] = Math.min(dynamic[i][j], dynamic[i - 2][j - 2] +
-                                (command.charAt(i - 2) == cpe.getCommandName().charAt(j - 1) ? 0 : 1) +
-                                (command.charAt(i - 1) == cpe.getCommandName().charAt(j - 2) ? 0 : 1));
+                                (command.charAt(i - 2) == commandName.charAt(j - 1) ? 0 : 1) +
+                                (command.charAt(i - 1) == commandName.charAt(j - 2) ? 0 : 1));
                     }
                 }
             }
 
-            final long nameDistance = dynamic[command.length()][cpe.getCommandName().length()] * 2;
+            final long nameDistance = dynamic[command.length()][commandName.length()] * 2;
 
             long argsDistance = Long.MAX_VALUE;
-            for (final Integer argumentsCount: runner.getArgumentsCount(command)) {
-                final long current = Math.abs(argumentsCount - cpe.getCommandArgs().length);
+            if (commandArgsCount >= 0) {
+                for (final Integer argumentsCount : runner.getArgumentsCount(command)) {
+                    final long current = Math.abs(argumentsCount - commandArgsCount);
 
-                if (argsDistance > current) {
-                    argsDistance = current;
+                    if (argsDistance > current) {
+                        argsDistance = current;
+                    }
                 }
+            } else {
+                argsDistance = 0;
             }
 
             final long distance = nameDistance + argsDistance;

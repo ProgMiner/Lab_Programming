@@ -7,8 +7,11 @@ import java.math.RoundingMode;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,12 +35,12 @@ public abstract class UDPSocket<D> implements Closeable {
     /**
      * Signature of packets
      */
-    public final static int SIGNATURE = 0x55_44_50_53;
+    public static final int SIGNATURE = 0x55_44_50_53;
 
     /**
      * Size of packet header in bytes
      */
-    public final static int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
+    public static final int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
 
     /**
      * Inner class for receive packets
@@ -52,7 +55,7 @@ public abstract class UDPSocket<D> implements Closeable {
         /**
          * Set of expected, but not received, confirmations (CONFIRM packets)
          */
-        private final Set<Long> expectedConfirmations = Collections.synchronizedSet(new HashSet<>());
+        private final Set<Long> expectedConfirmations = new ConcurrentSkipListSet<>();
 
         /**
          * Blocking queue of received objects
@@ -222,7 +225,7 @@ public abstract class UDPSocket<D> implements Closeable {
     protected final D device;
 
     // Sending
-    private final static long RESEND_DELAY = 100;
+    private static final long RESEND_DELAY = 100;
     private final AtomicLong previous = new AtomicLong();
     private final Object sendSemaphore = new Object();
 

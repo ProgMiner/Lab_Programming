@@ -65,7 +65,11 @@ public class ReflectionCommandRunner extends ListCommandRunner {
             usages.putIfAbsent(commandName, usage.equals(CommandHandler.NULL) ? null : usage);
 
             int specialParameterCount = 0;
-            Invokable commandInvokable = (args) -> m.invoke(handler, args);
+            Invokable commandInvokable = (args) -> {
+                m.setAccessible(true);
+                m.invoke(handler, args);
+                m.setAccessible(false);
+            };
             final int parameterCount = m.getParameterCount();
             if (parameterCount > 0) {
                 int current = 0;

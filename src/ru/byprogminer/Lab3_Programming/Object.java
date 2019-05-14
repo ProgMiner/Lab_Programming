@@ -4,12 +4,16 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.Arrays;
 import java.util.Objects;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
 public abstract class Object implements Serializable {
 
-    protected final static DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
-    private final static String STRING_FORMAT = "Object %s with volume %s at (%s, %s, %s) created %s";
+    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
+
+    private static final String STRING_FORMAT = "Object %s with volume %s at (%s, %s, %s) created %s";
 
     private final String name;
 
@@ -18,7 +22,7 @@ public abstract class Object implements Serializable {
     private LocalDateTime creatingTime;
 
     public Object(final String name) {
-        this(name, 0, 0D, 0D, 0D, LocalDateTime.now());
+        this(name, 0, LocalDateTime.now(), 0D, 0D, 0D);
     }
 
     public Object(
@@ -26,23 +30,23 @@ public abstract class Object implements Serializable {
             final double volume,
             final LocalDateTime creatingTime
     ) {
-        this(name, volume, 0D, 0D, 0D, creatingTime);
+        this(name, volume, creatingTime, 0D, 0D, 0D);
     }
 
     public Object(
             final String name,
             final double volume,
+            final LocalDateTime creatingTime,
             final double x,
             final double y,
-            final double z,
-            final LocalDateTime creatingTime
+            final double z
     ) {
         this.name = name;
         this.volume = volume;
+        this.creatingTime = creatingTime.withNano(0);
         this.x = x;
         this.y = y;
         this.z = z;
-        this.creatingTime = creatingTime;
     }
 
     public String getName() {
@@ -86,7 +90,7 @@ public abstract class Object implements Serializable {
     }
 
     public void setCreatingTime(LocalDateTime creatingTime) {
-        this.creatingTime = Objects.requireNonNull(creatingTime);
+        this.creatingTime = Objects.requireNonNull(creatingTime).withNano(0);
     }
 
     @Override
@@ -97,7 +101,7 @@ public abstract class Object implements Serializable {
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return Arrays.hashCode(arrayOf(name, volume, creatingTime, x, y, z));
     }
 
     @Override

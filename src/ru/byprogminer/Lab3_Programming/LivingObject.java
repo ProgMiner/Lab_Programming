@@ -3,13 +3,18 @@ package ru.byprogminer.Lab3_Programming;
 import ru.byprogminer.Lab4_Programming.DeathException;
 import ru.byprogminer.Lab4_Programming.NotFoundException;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
 public abstract class LivingObject extends Object implements Hitter, Picker, Movable, Thinkable, Comparable<LivingObject> {
 
-    private final static String STRING_FORMAT = "LivingObject %s with volume %s at (%s, %s, %s) created %s, currently %s, %s";
+    private static final String STRING_FORMAT = "LivingObject %s with volume %s at (%s, %s, %s) created %s, currently %s, %s";
 
     private final Set<Object> items = new HashSet<>();
 
@@ -126,36 +131,30 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
 
     @Override
     public int compareTo(LivingObject that) {
-        int nameCompare = this.getName().compareTo(that.getName());
+        for (Comparator<LivingObject> comparator : arrayOf(
+                Comparator.comparing(LivingObject::getName),
+                Comparator.comparingDouble(LivingObject::getVolume),
+                Comparator.comparing(LivingObject::getCreatingTime),
+                Comparator.comparingDouble(LivingObject::getX),
+                Comparator.comparingDouble(LivingObject::getY),
+                Comparator.comparingDouble(LivingObject::getZ),
+                Comparator.comparing(LivingObject::isLives),
+                Comparator.comparingDouble((ToDoubleFunction<LivingObject>) (o ->
+                        o.items.stream().mapToDouble(Object::getVolume).sum()))
+        )) {
+            final int result = comparator.compare(this, that);
 
-        if (nameCompare != 0) {
-            return nameCompare;
+            if (result != 0) {
+                return result;
+            }
         }
 
-        if (this.lives != that.lives) {
-            return Boolean.compare(this.lives, that.lives);
-        }
-
-        if (this.getItems().size() != that.getItems().size()) {
-            return this.getItems().size() - that.getItems().size();
-        }
-
-        return this.hashCode() - that.hashCode();
+        return 0;
     }
 
     @Override
     public int hashCode() {
-        int code = getName().hashCode();
-
-        for (Object o: items) {
-            code <<= 1;
-            code += o.hashCode();
-        }
-
-        code <<= 1;
-        code += lives ? 1 : 0;
-
-        return code;
+        return Arrays.hashCode(arrayOf(super.hashCode(), lives, items));
     }
 
     @Override

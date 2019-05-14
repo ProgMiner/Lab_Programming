@@ -1,21 +1,20 @@
-package ru.byprogminer.Lab5_Programming;
+package ru.byprogminer.Lab7_Programming.csv;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab3_Programming.Object;
-import ru.byprogminer.Lab5_Programming.csv.CSVWriterWithHeader;
+import ru.byprogminer.Lab5_Programming.csv.CsvWriterWithHeader;
+import ru.byprogminer.Lab7_Programming.LivingObjectWriter;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
-import static ru.byprogminer.Lab5_Programming.LivingObjectCSVReader.OWNER_ID_FIELD_NAME;
+public class CsvLivingObjectWriter implements LivingObjectWriter<IOException>, Closeable {
 
-public class LivingObjectCSVWriter {
+    private static final List<String> CSV_HEADER;
 
-    private final static List<String> CSV_HEADER;
-
-    private final CSVWriterWithHeader writer;
+    private final CsvWriterWithHeader writer;
 
     private final AtomicInteger currentObject = new AtomicInteger(0);
     private final AtomicInteger currentItem = new AtomicInteger(0);
@@ -30,7 +29,7 @@ public class LivingObjectCSVWriter {
         CSV_HEADER = Collections.unmodifiableList(csvColumns);
     }
 
-    public LivingObjectCSVWriter(CSVWriterWithHeader writer) throws IOException {
+    public CsvLivingObjectWriter(CsvWriterWithHeader writer) throws IOException {
         this.writer = writer;
 
         if (writer.getColumns() == null) {
@@ -38,10 +37,12 @@ public class LivingObjectCSVWriter {
         }
     }
 
-    public <T extends LivingObject> void write(T livingObject) throws IOException {
+    @Override
+    public void write(LivingObject livingObject) throws IOException {
         writeObject(livingObject);
     }
 
+    @Override
     public void writeMetadata(String key, String value) throws IOException {
         writeRow("meta", 0, key, value);
     }
@@ -49,18 +50,25 @@ public class LivingObjectCSVWriter {
     private <T extends LivingObject> void writeObject(T object) throws IOException {
         int id = currentObject.getAndIncrement();
 
-        writeObject(object, "object", id, null);
+        writeObject(object, "object", id);
         writeRow("object", id, "lives", object.isLives());
 
-        object.getItems().parallelStream().forEachOrdered(
-                throwing().consumer(item -> writeItem(item, id)));
+        final Set<String> itemIds = new HashSet<>();
+        for (Object item : object.getItems()) {
+            itemIds.add(Integer.toString(writeItem(item)));
+        }
+
+        writeRow("object", id, "items", String.join(CsvLivingObjectReader.ARRAY_SPLITTER, itemIds));
     }
 
-    private <T extends Object> void writeItem(T object, int ownerId) throws IOException {
-        writeObject(object, "item", currentItem.getAndIncrement(), ownerId);
+    private <T extends Object> int writeItem(T object) throws IOException {
+        final int id = currentItem.getAndIncrement();
+
+        writeObject(object, "item", id);
+        return id;
     }
 
-    private <T extends Object> void writeObject(T object, String type, int id, Integer ownerId) throws IOException {
+    private <T extends Object> void writeObject(T object, String type, int id) throws IOException {
         Objects.requireNonNull(type);
 
         writeRow(type, id, "name", object.getName());
@@ -69,10 +77,6 @@ public class LivingObjectCSVWriter {
         writeRow(type, id, "x", object.getX());
         writeRow(type, id, "y", object.getY());
         writeRow(type, id, "z", object.getZ());
-
-        if (ownerId != null) {
-            writeRow(type, id, OWNER_ID_FIELD_NAME, ownerId);
-        }
     }
 
     private <T> void writeRow(String type, int id, String key, T value) throws IOException {
@@ -84,5 +88,15 @@ public class LivingObjectCSVWriter {
         row.put("value", value.toString());
 
         writer.write(row);
+    }
+
+    @Override
+    public void flush() throws IOException {
+        writer.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+        writer.close();
     }
 }

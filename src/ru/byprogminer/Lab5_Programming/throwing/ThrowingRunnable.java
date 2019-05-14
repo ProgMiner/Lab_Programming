@@ -1,14 +1,12 @@
 package ru.byprogminer.Lab5_Programming.throwing;
 
-import java.util.function.Consumer;
-
 @FunctionalInterface
-public interface ThrowingConsumer<T, E extends Exception> extends Consumer<T> {
+public interface ThrowingRunnable<E extends Exception> extends Runnable {
 
     @Override
-    default void accept(T value) {
+    default void run() {
         try {
-            throwingAccept(value);
+            throwingRun();
         } catch (Exception exception) {
             if (exception instanceof RuntimeException) {
                 throw (RuntimeException) exception;
@@ -18,5 +16,5 @@ public interface ThrowingConsumer<T, E extends Exception> extends Consumer<T> {
         }
     }
 
-    void throwingAccept(T value) throws E;
+    void throwingRun() throws E;
 }

@@ -2,12 +2,12 @@ package ru.byprogminer.Lab5_Programming.csv;
 
 import java.util.*;
 
-public class CSVReaderWithHeader implements Iterable<Map<String, String>>, Iterator<Map<String, String>> {
+public class CsvReaderWithHeader implements Iterable<Map<String, String>>, Iterator<Map<String, String>> {
 
-    private final CSVReader reader;
+    private final CsvReader reader;
     private List<String> cols = null;
 
-    public CSVReaderWithHeader(CSVReader reader) {
+    public CsvReaderWithHeader(CsvReader reader) {
         this.reader = reader;
     }
 
@@ -46,7 +46,7 @@ public class CSVReaderWithHeader implements Iterable<Map<String, String>>, Itera
         return this;
     }
 
-    public CSVReader getReader() {
+    public CsvReader getReader() {
         return reader;
     }
 

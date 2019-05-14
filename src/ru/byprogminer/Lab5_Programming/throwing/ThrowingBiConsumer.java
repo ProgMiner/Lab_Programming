@@ -3,14 +3,18 @@ package ru.byprogminer.Lab5_Programming.throwing;
 import java.util.function.BiConsumer;
 
 @FunctionalInterface
-public interface ThrowingBiConsumer<A, B, E extends Throwable> extends BiConsumer<A, B> {
+public interface ThrowingBiConsumer<A, B, E extends Exception> extends BiConsumer<A, B> {
 
     @Override
     default void accept(A a, B b) {
         try {
             throwingAccept(a, b);
-        } catch (Throwable exception) {
-            throw new RuntimeException(exception.getMessage(), exception);
+        } catch (Exception exception) {
+            if (exception instanceof RuntimeException) {
+                throw (RuntimeException) exception;
+            }
+
+            throw new LambdaException(exception);
         }
     }
 

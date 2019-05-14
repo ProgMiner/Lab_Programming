@@ -22,8 +22,9 @@ import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 public class Main {
 
-    public final static int PART_SIZE = 1024;
-    public final static int CONNECT_DELAY = 3000;
+    public static final int PART_SIZE = 1024;
+    public static final int CONNECT_DELAY = 3000;
+    public static final long CLIENT_TIMEOUT = 10000;
 
     private static final String USAGE = "Usage: java -jar lab6_client.jar <port> [server]\n" +
             "  - port\n" +
@@ -31,7 +32,7 @@ public class Main {
             "  - server\n" +
             "    Not required server address";
 
-    private final static CallableCommandRunner commandRunner = new CallableCommandRunner();
+    private static final CallableCommandRunner commandRunner = new CallableCommandRunner();
 
     private volatile static SocketAddress address = null;
     private volatile static UDPSocket<?> socket = null;
@@ -154,11 +155,11 @@ public class Main {
                     return;
                 }
 
-                socket.send(request, Server.CLIENT_TIMEOUT);
+                socket.send(request, CLIENT_TIMEOUT);
 
                 while (!socket.isClosed()) {
                     try {
-                        final Response response = socket.receive(Response.class, Server.CLIENT_TIMEOUT);
+                        final Response response = socket.receive(Response.class, CLIENT_TIMEOUT);
 
                         if (response instanceof Response.Message) {
                             switch (((Response.Message) response).getStatus()) {
