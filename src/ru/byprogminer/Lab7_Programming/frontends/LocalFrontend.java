@@ -1,5 +1,6 @@
 package ru.byprogminer.Lab7_Programming.frontends;
 
+import ru.byprogminer.Lab5_Programming.command.CommandRunner;
 import ru.byprogminer.Lab5_Programming.command.Console;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner.CommandHandler;
@@ -13,10 +14,12 @@ import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectWriter;
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
 import ru.byprogminer.Lab7_Programming.views.*;
 
 import java.io.*;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
@@ -46,17 +49,17 @@ public class LocalFrontend implements Frontend {
 
         @CommandHandler(usage = "help [command]", description = "" +
                 "Show available commands or description of the command if provided")
-        public void help(final Console console) {
+        public void help() {
             console.printHelp(arrayOf());
         }
 
         @CommandHandler
-        public void help(final String command, final Console console) {
+        public void help(String command) {
             console.printHelp(arrayOf(command));
         }
 
         @CommandHandler(description = "Exit from the application")
-        public void exit(final Console console) {
+        public void exit() {
             console.quit();
         }
 
@@ -64,42 +67,42 @@ public class LocalFrontend implements Frontend {
 
         @CommandHandler(usage = "add <element>", description = "" +
                 "Add the provided element to the collection\n" + ELEMENT_DESCRIPTION)
-        public void add(String elementJson, Console console) {
-            render(collectionController.add(jsonToLivingObject(elementJson)), console);
+        public void add(String elementJson) {
+            render(collectionController.add(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(usage = "remove <element>", description = "" +
                 "Remove the provided element from the collection\n" + ELEMENT_DESCRIPTION)
-        public void remove(String elementJson, Console console) {
-            render(collectionController.remove(jsonToLivingObject(elementJson)), console);
+        public void remove(String elementJson) {
+            render(collectionController.remove(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(alias = "remove_lower", usage = "remove_lower <element>", description = "" +
                 "Remove all elements that lower than the provided from the collection\n" + ELEMENT_DESCRIPTION)
-        public void removeLower(String elementJson, Console console) {
-            render(collectionController.removeLower(jsonToLivingObject(elementJson)), console);
+        public void removeLower(String elementJson) {
+            render(collectionController.removeLower(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(alias = "remove_greater", usage = "remove_greater <element>", description = "" +
                 "Remove all elements that greater than the provided from the collection\n" + ELEMENT_DESCRIPTION)
-        public void removeGreater(String elementJson, Console console) {
-            render(collectionController.removeGreater(jsonToLivingObject(elementJson)), console);
+        public void removeGreater(String elementJson) {
+            render(collectionController.removeGreater(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(description = "Show information about the collection")
-        public void info(Console console) {
-            render(collectionController.info(), console);
+        public void info() {
+            render(collectionController.info());
         }
 
         @CommandHandler(usage = "show [count]", description = "" +
                 "Show elements in the collection\n" +
                 "  - count - maximum count of elements, default all")
-        public void show(Console console) {
-            render(collectionController.show(), console);
+        public void show() {
+            render(collectionController.show());
         }
 
         @CommandHandler
-        public void show(String countString, Console console) {
+        public void show(String countString) {
             final long count;
 
             try {
@@ -108,12 +111,12 @@ public class LocalFrontend implements Frontend {
                 throw new IllegalArgumentException("count has bad format", e);
             }
 
-            render(collectionController.show(count), console);
+            render(collectionController.show(count));
         }
 
         @CommandHandler(description = "An alias for the `show` command")
-        public void ls(Console console) {
-            show(console);
+        public void ls() {
+            show();
         }
 
         //=== Import/export commands ===//
@@ -121,45 +124,21 @@ public class LocalFrontend implements Frontend {
         @CommandHandler(usage = "save <filename>", description = "" +
                 "Save collection to file in CSV format\n" +
                 "  - filename - name of file to save")
-        public void save(String filename, Console console) {
-            final Writer writer;
-
-            try {
-                writer = new FileWriter(filename);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("bad filename, " + e.getLocalizedMessage(), e);
-            }
-
-            final LivingObjectWriter<IOException> livingObjectWriter;
-            try {
-                livingObjectWriter = new CsvLivingObjectWriter(new CsvWriterWithHeader(new CsvWriter(writer)));
-            } catch (IOException e) {
-                throw new IllegalArgumentException("unknown error: " + e.getLocalizedMessage(), e);
-            }
-
-            render(collectionController.save(livingObjectWriter, filename), console);
+        public void save(String filename) {
+            render(collectionController.save(filename));
         }
 
         @CommandHandler(usage = "load <filename>", description = "" +
                 "Load collection (instead of current) from file in CSV format\n" +
                 "  - filename - name of file to load")
-        public void load(String filename, Console console) {
-            final Scanner scanner;
-
-            try {
-                scanner = new Scanner(new File(filename));
-            } catch (FileNotFoundException e) {
-                throw new IllegalArgumentException("file not found", e);
-            }
-
-            render(collectionController.load(new CsvLivingObjectReader(new CsvReaderWithHeader(
-                    new CsvReader(scanner))), filename), console);
+        public void load(String filename) {
+            render(collectionController.load(filename));
         }
 
         @CommandHandler(alias = "import", usage = "import <filename>", description = "" +
                 "Import elements from file\n" +
                 "  - filename - name of file to import")
-        public void _import(String filename, Console console) {
+        public void _import(String filename) {
             final Scanner scanner;
 
             try {
@@ -169,11 +148,14 @@ public class LocalFrontend implements Frontend {
             }
 
             render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
-                    new CsvReader(scanner))).getObjects()), console);
+                    new CsvReader(scanner))).getObjects()));
         }
     }
 
-    private final ReflectionCommandRunner commandRunner = ReflectionCommandRunner.make(new Commands());
+    private static final Logger log = Loggers.getLogger(LocalFrontend.class.getName());
+
+    private final CommandRunner commandRunner = ReflectionCommandRunner.make(new Commands());
+    private final Console console = new Console(commandRunner);
 
     private final CollectionController collectionController;
 
@@ -182,14 +164,20 @@ public class LocalFrontend implements Frontend {
     }
 
     @Override
-    public void exec() throws RuntimeException {
-        final Console console = new Console(commandRunner);
+    public void exec() throws IllegalStateException {
+        log.info("execute frontend");
 
         console.println("Lab7_Programming. Type `help` to get help");
         console.exec();
     }
 
-    private void render(View view, Console console) {
+    @Override
+    public void stop() {
+        log.info("stop frontend");
+        console.quit();
+    }
+
+    private void render(View view) {
         if (view.error != null) {
             console.printError(view.error + ". Please try again or consult a specialist");
         }

@@ -2,5 +2,6 @@ package ru.byprogminer.Lab7_Programming;
 
 public interface Frontend {
 
-    void exec();
+    void exec() throws IllegalStateException;
+    void stop();
 }

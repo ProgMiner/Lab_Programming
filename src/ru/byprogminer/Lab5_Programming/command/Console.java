@@ -1,5 +1,6 @@
 package ru.byprogminer.Lab5_Programming.command;
 
+import ru.byprogminer.Lab7_Programming.RunMutex;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import java.io.InputStream;
@@ -19,7 +20,7 @@ public class Console implements StatusPrinter {
     private final PrintStream printer;
     private final Scanner scanner;
 
-    private volatile boolean running = false;
+    private final RunMutex runMutex = new RunMutex();
 
     private volatile long maxMistakeCount = 3;
 
@@ -75,16 +76,15 @@ public class Console implements StatusPrinter {
         runner.getSpecialParameterTypes().put(Console.class, this);
     }
 
-    public void exec() throws RuntimeException {
-        if (running) {
-            log.warning("Trying to run running console");
-            throw new RuntimeException("this console is running already");
+    public void exec() throws IllegalStateException {
+        if (!runMutex.tryRun()) {
+            log.warning("Trying to execute running console");
+            throw new IllegalStateException("this console is running already");
         }
 
-        running = true;
         synchronized (scanner) {
-            while (running) {
-                printer.print(translator.get("prompt"));
+            while (runMutex.isRunning()) {
+                print(translator.get("prompt"));
 
                 if (!scanner.hasNextLine()) {
                     break;
@@ -112,7 +112,7 @@ public class Console implements StatusPrinter {
 
                         final String usage = runner.getUsage(commandName);
                         if (usage != null) {
-                            printer.printf(translator.get("message.usage"), usage);
+                            printf(translator.get("message.usage"), usage);
                         }
 
                         String[] commandArgs = cpe.getCommandArgs();
@@ -121,11 +121,11 @@ public class Console implements StatusPrinter {
 
                             if (commands != null && commands.contains(commandName)) {
                                 if (commands.contains("help")) {
-                                    printer.printf(translator.get("help.try.command"), commandName);
+                                    printf(translator.get("help.try.command"), commandName);
                                 }
                             } else {
                                 if (commands != null && commands.contains("help")) {
-                                    printer.print(translator.get("help.try"));
+                                    print(translator.get("help.try"));
                                 }
 
                                 checkSpelling(commandName, commandArgs.length);
@@ -139,18 +139,20 @@ public class Console implements StatusPrinter {
                     printWarning("an error occurred while command performing");
                 }
             }
+
+            runMutex.end();
         }
     }
 
     public void quit() {
-        running = false;
+        runMutex.stop();
     }
 
     public void printHelp(final String[] args) {
         final Set<String> commands = runner.getCommands();
 
         if (args.length == 0) {
-            printer.print(translator.get("commands.title.help"));
+            print(translator.get("commands.title.help"));
 
             commands.parallelStream().forEachOrdered(command ->
                     printHelpForCommand(command, false));
@@ -169,16 +171,19 @@ public class Console implements StatusPrinter {
 
     @Override
     public void print(final Object msg) {
+        log.info(String.format("print: %s", msg.toString()));
         printer.print(msg);
     }
 
     @Override
     public void println(final Object msg) {
+        log.info(String.format("println: %s", msg.toString()));
         printer.println(msg);
     }
 
     @Override
     public void printf(final String format, final Object... args) {
+        log.info(String.format("printf: %s", String.format(format, args)));
         printer.printf(format, (Object[]) args);
     }
 
@@ -250,10 +255,10 @@ public class Console implements StatusPrinter {
             return;
         }
         
-        printer.print(translator.get("commands.title.spelling"));
+        print(translator.get("commands.title.spelling"));
         commands.forEach((k, strings) ->
                 strings.forEach(command ->
-                        printer.printf(translator.get("commands.item"), getUsage(command))
+                        printf(translator.get("commands.item"), getUsage(command))
                 )
         );
     }
@@ -264,14 +269,14 @@ public class Console implements StatusPrinter {
         if (single) {
             final String description = runner.getDescription(command);
 
-            printer.printf(translator.get("message.usage"), usage);
+            printf(translator.get("message.usage"), usage);
             if (description != null) {
-                Stream.of(description.split("\n")).forEach(printer::println);
+                Stream.of(description.split("\n")).forEach(this::println);
             } else {
-                printer.println("Description isn't provided");
+                println("Description isn't provided");
             }
         } else {
-            printer.printf(translator.get("commands.item"), usage);
+            printf(translator.get("commands.item"), usage);
         }
     }
 
@@ -327,9 +332,5 @@ public class Console implements StatusPrinter {
 
     public Map<String, String> getTranslator() {
         return translator;
-    }
-
-    public boolean isRunning() {
-        return running;
     }
 }

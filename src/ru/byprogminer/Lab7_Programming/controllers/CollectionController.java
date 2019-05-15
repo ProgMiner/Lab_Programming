@@ -1,11 +1,19 @@
 package ru.byprogminer.Lab7_Programming.controllers;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
+import ru.byprogminer.Lab5_Programming.csv.CsvReader;
+import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
+import ru.byprogminer.Lab5_Programming.csv.CsvWriter;
+import ru.byprogminer.Lab5_Programming.csv.CsvWriterWithHeader;
 import ru.byprogminer.Lab7_Programming.LivingObjectReader;
 import ru.byprogminer.Lab7_Programming.LivingObjectWriter;
+import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
+import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectWriter;
 import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.views.*;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.*;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
@@ -78,28 +86,33 @@ public class CollectionController {
         }
     }
 
-    public <E extends Exception> SaveView save(LivingObjectWriter<E> to, String destination) {
+    public SaveView save(String filename) {
         try {
+            final LivingObjectWriter<?> writer = new CsvLivingObjectWriter(new CsvWriterWithHeader(
+                    new CsvWriter(new FileWriter(filename))));
+
             final SortedMap<String, String> metadata = new TreeMap<>(collectionModel.getMetadata());
-            metadata.forEach(throwing().consumer(to::writeMetadata));
+            metadata.forEach(throwing().consumer(writer::writeMetadata));
 
             final SortedSet<LivingObject> livingObjects = new TreeSet<>(collectionModel.get());
-            livingObjects.forEach(throwing().consumer(to::write));
+            livingObjects.forEach(throwing().consumer(writer::write));
 
-            to.flush();
-            return new SaveView(destination);
+            writer.flush();
+            return new SaveView(filename);
         } catch (Throwable e) {
-            return new SaveView(destination, e.getLocalizedMessage());
+            return new SaveView(filename, e.getLocalizedMessage());
         }
     }
 
-    public LoadView load(LivingObjectReader from, String source) {
+    public LoadView load(String filename) {
         try {
-            collectionModel.load(from.getObjects(), from.getMetadata());
+            final LivingObjectReader reader = new CsvLivingObjectReader(new CsvReaderWithHeader(
+                    new CsvReader(new Scanner(new File(filename)))));
 
-            return new LoadView(source);
+            collectionModel.load(reader.getObjects(), reader.getMetadata());
+            return new LoadView(filename);
         } catch (Throwable e) {
-            return new LoadView(source, e.getLocalizedMessage());
+            return new LoadView(filename, e.getLocalizedMessage());
         }
     }
 

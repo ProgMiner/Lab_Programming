@@ -1,8 +1,10 @@
 package ru.byprogminer.Lab6_Programming;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
+import ru.byprogminer.Lab7_Programming.View;
 
 import java.io.Serializable;
+import java.util.Collection;
 
 public abstract class Packet implements Serializable {
 
@@ -10,14 +12,19 @@ public abstract class Packet implements Serializable {
 
         private static abstract class _ElementContainer extends Request {
 
-            private final LivingObject element;
+            public final LivingObject element;
 
             public _ElementContainer(LivingObject element) {
                 this.element = element;
             }
+        }
 
-            public LivingObject getElement() {
-                return element;
+        private static abstract class _FilenameContainer extends Request {
+
+            public final String filename;
+
+            public _FilenameContainer(String filename) {
+                this.filename = filename;
             }
         }
 
@@ -28,11 +35,12 @@ public abstract class Packet implements Serializable {
             }
         }
 
-        public static final class Load extends Request {}
+        public static final class Remove extends _ElementContainer {
 
-        public static final class Save extends Request {}
-
-        public static final class Show extends Request {}
+            public Remove(LivingObject element) {
+                super(element);
+            }
+        }
 
         public static final class RemoveLower extends _ElementContainer {
 
@@ -48,25 +56,39 @@ public abstract class Packet implements Serializable {
             }
         }
 
-        public static final class Remove extends _ElementContainer {
+        public static final class Info extends Request {}
 
-            public Remove(LivingObject element) {
-                super(element);
+        public static final class ShowAll extends Request {}
+
+        public static final class Show extends Request {
+
+            public final int count;
+
+            public Show(int count) {
+                this.count = count;
             }
         }
 
-        public static final class Info extends Request {}
+        public static final class Save extends _FilenameContainer {
+
+            public Save(String filename) {
+                super(filename);
+            }
+        }
+
+        public static final class Load extends _FilenameContainer {
+
+            public Load(String filename) {
+                super(filename);
+            }
+        }
 
         public static final class Import extends Request {
 
-            private final byte[] content;
+            public final Collection<LivingObject> content;
 
-            public Import(byte[] content) {
+            public Import(Collection<LivingObject> content) {
                 this.content = content;
-            }
-
-            public byte[] getContent() {
-                return content;
             }
         }
 
@@ -75,39 +97,14 @@ public abstract class Packet implements Serializable {
 
     public abstract static class Response extends Packet {
 
-        public static class Message extends Response {
+        public static class Done extends Response {
 
-            public enum Status {
+            public final View view;
 
-                OK, WARN, ERR;
-
-                public Status update(Status next) {
-                    if (next.ordinal() < ordinal()) {
-                        return this;
-                    }
-
-                    return next;
-                }
-            }
-
-            private final String content;
-            private final Status status;
-
-            public Message(String content, Status status) {
-                this.content = content;
-                this.status = status;
-            }
-
-            public String getContent() {
-                return content;
-            }
-
-            public Status getStatus() {
-                return status;
+            public Done(View view) {
+                this.view = view;
             }
         }
-
-        public static class Done extends Response {}
 
         private Response() {}
     }
