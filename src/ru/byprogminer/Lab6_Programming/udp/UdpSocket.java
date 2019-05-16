@@ -1,5 +1,7 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
+
 import java.io.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,6 +17,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.CRC32;
 
 /**
@@ -30,22 +34,14 @@ import java.util.zip.CRC32;
  *   - Count     -  byte  - Count of packets in this object (decreased by one)
  *   - Content   - byte[] - Content of this packet
  */
-public abstract class UDPSocket<D> implements Closeable {
-
-    /**
-     * Signature of packets
-     */
-    public static final int SIGNATURE = 0x55_44_50_53;
-
-    /**
-     * Size of packet header in bytes
-     */
-    public static final int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
+public abstract class UdpSocket<D> implements Closeable {
 
     /**
      * Inner class for receive packets
      */
     private class Receiver {
+
+        private final Logger log = receiverLog;
 
         /**
          * {@link Thread} object of this Receiver
@@ -70,7 +66,7 @@ public abstract class UDPSocket<D> implements Closeable {
         /**
          * Pull of received but not processed packets
          */
-        private final Map<Long, ByteBuffer> pull = new HashMap<>();
+        private final Map<Long, ByteBuffer> pool = new HashMap<>();
 
         /**
          * Previous received and processed packet hash
@@ -92,14 +88,18 @@ public abstract class UDPSocket<D> implements Closeable {
         }
 
         private void run() {
+            log.info("receiver started");
+
             while (!closed) {
                 try {
                     receivePacket();
                 } catch (SocketTimeoutException ignored) {
                 } catch (Throwable e) {
-                    // e.printStackTrace();
+                    log.log(Level.INFO, "exception in receiver loop", e);
                 }
             }
+
+            log.info("receiver finished");
         }
 
         /**
@@ -108,6 +108,7 @@ public abstract class UDPSocket<D> implements Closeable {
         private void receivePacket() throws IOException, InterruptedException, ClassNotFoundException {
             final ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
             final SocketAddress address = receiveDatagram(buffer);
+            log.info("received packet");
             buffer.flip();
 
             final ByteBuffer packet = buffer.asReadOnlyBuffer();
@@ -117,7 +118,7 @@ public abstract class UDPSocket<D> implements Closeable {
 
             final Action action = Action.by(buffer.get());
             if (action == Action.CONNECT) {
-                synchronized (UDPSocket.this) {
+                synchronized (UdpSocket.this) {
                     if (remote == null) {
                         remote = address;
                     }
@@ -147,9 +148,9 @@ public abstract class UDPSocket<D> implements Closeable {
                     sendDatagram(makePacket(Action.CONFIRM, hash, 0, ByteBuffer.allocate(0)));
 
                 case FINISH:
-                    pull.putIfAbsent(previous, packet);
+                    pool.putIfAbsent(previous, packet);
 
-                    processPull();
+                    processPool();
                     return;
 
                 case CONFIRM:
@@ -157,19 +158,19 @@ public abstract class UDPSocket<D> implements Closeable {
             }
         }
 
-        private void processPull() throws IOException, InterruptedException, ClassNotFoundException {
-            synchronized (pull) {
+        private void processPool() throws IOException, InterruptedException, ClassNotFoundException {
+            synchronized (pool) {
                 long previous = this.previous.get();
 
-                while (pull.containsKey(previous)) {
-                    final ByteBuffer packet = pull.remove(previous);
-
+                ByteBuffer packet;
+                while ((packet = pool.remove(previous)) != null) {
                     previous = crc32(packet);
                     packet.rewind();
 
                     processPacket(packet);
                 }
 
+                log.info(String.format("rotate previous %d -> %d", this.previous.get(), previous));
                 this.previous.set(previous);
             }
         }
@@ -193,14 +194,13 @@ public abstract class UDPSocket<D> implements Closeable {
 
             final ByteBuffer objectBuffer;
             if (count > 1) {
-                synchronized (this) {
-                    objectBuffer = receivingObject = (receivingObject == null ? ByteBuffer.allocate(packetSize.intValue() * count) : receivingObject);
-                }
+                final ByteBuffer receivingObject = this.receivingObject;
+                this.receivingObject = objectBuffer = (receivingObject == null ? ByteBuffer.allocate(packetSize.intValue() * count) : receivingObject);
 
                 objectBuffer.put(packet);
             } else {
                 objectBuffer = packet.slice();
-                objectBuffer.position(objectBuffer.remaining());
+                objectBuffer.position(objectBuffer.remaining()); // It's OK
             }
 
             if (objectBuffer.remaining() < packetSize.intValue()) {
@@ -212,11 +212,27 @@ public abstract class UDPSocket<D> implements Closeable {
                 objectBuffer.get(buffer);
 
                 final ObjectInputStream stream = new ObjectInputStream(new ByteArrayInputStream(buffer));
-                receivedObjects.put(stream.readObject());
+                final Object receivedObject = stream.readObject();
+                log.info("received object " + receivedObject);
+                receivedObjects.put(receivedObject);
                 stream.close();
             }
         }
     }
+
+    /**
+     * Signature of packets
+     */
+    public static final int SIGNATURE = 0x55_44_50_53;
+
+    /**
+     * Size of packet header in bytes
+     */
+    public static final int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
+
+    // Logging
+    private static final Logger log = Loggers.getLogger(UdpSocket.class.getName());
+    private static final Logger receiverLog = Loggers.getLogger(UdpSocket.Receiver.class.getName());
 
     // General
     protected volatile SocketAddress remote = null;
@@ -226,8 +242,9 @@ public abstract class UDPSocket<D> implements Closeable {
 
     // Sending
     private static final long RESEND_DELAY = 100;
+
     private final AtomicLong previous = new AtomicLong();
-    private final Object sendSemaphore = new Object();
+    private final Object sendMutex = new Object();
 
     // Receiving
     private final Receiver receiver = new Receiver();
@@ -238,10 +255,11 @@ public abstract class UDPSocket<D> implements Closeable {
      * @param device device for working with datagrams
      * @param packetSize size of content field of packets
      */
-    public UDPSocket(D device, int packetSize) {
+    public UdpSocket(D device, int packetSize) {
         this.packetSize = BigDecimal.valueOf(packetSize);
         this.device = device;
 
+        log.info("starting receiver");
         receiver.start();
     }
 
@@ -262,12 +280,14 @@ public abstract class UDPSocket<D> implements Closeable {
             remote = null;
         }
 
+        log.info("try to connect to server");
         final long start = System.currentTimeMillis();
         while (remote == null && System.currentTimeMillis() - start < timeout) {
             Thread.yield();
         }
 
         if (remote == null) {
+            log.info("connection timed out");
             throw new SocketTimeoutException("connection timed out");
         }
     }
@@ -281,6 +301,8 @@ public abstract class UDPSocket<D> implements Closeable {
      */
     public final synchronized void accept(SocketAddress from) throws IOException {
         assertNotConnected();
+
+        log.info("connect to client");
 
         remote = from;
         sendDatagram(makePacket(Action.CONNECT, 0, ByteBuffer.allocate(0)));
@@ -296,16 +318,18 @@ public abstract class UDPSocket<D> implements Closeable {
      */
     public final void send(Object object, long timeout) throws IOException {
         if (remote == null) {
+            log.info("socket isn't connected");
             throw new IllegalStateException("socket isn't connected");
         }
 
         assertNotClosed();
-        synchronized (sendSemaphore) {
+        synchronized (sendMutex) {
             final ByteArrayOutputStream byteArrayStream = new ByteArrayOutputStream();
             final ObjectOutputStream objectStream = new ObjectOutputStream(byteArrayStream);
             objectStream.writeObject(object);
             objectStream.close();
 
+            log.info("send object " + object);
             final ByteBuffer objectBuffer = ByteBuffer.wrap(byteArrayStream.toByteArray());
             final int count = BigDecimal.valueOf(objectBuffer.remaining()).divide(packetSize, 0, RoundingMode.UP)
                     .toBigInteger().subtract(BigInteger.ONE).and(BigInteger.valueOf(0xFF)).intValue();
@@ -323,25 +347,29 @@ public abstract class UDPSocket<D> implements Closeable {
                 }
 
                 receiver.expectedConfirmations.add(hash);
+                log.info(String.format("send %d/%d object packet", i, count));
 
                 packet.rewind();
                 sendDatagram(packet);
                 while (receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
                     try {
-                        Thread.yield();
                         Thread.sleep(RESEND_DELAY);
-                    } catch (InterruptedException e) {
-                        // e.printStackTrace();
-                    }
+                        log.info(String.format("resend %d/%d object packet", i, count));
 
-                    packet.rewind();
-                    sendDatagram(packet);
+                        packet.rewind();
+                        sendDatagram(packet);
+                    } catch (Throwable e) {
+                        log.log(Level.INFO, "exception in send loop", e);
+                    }
                 }
             }
 
             if (i <= count) {
+                log.info("sending is timed out");
                 throw new SocketTimeoutException("sending is timed out");
             }
+
+            log.info("object sent");
         }
     }
 
@@ -363,10 +391,12 @@ public abstract class UDPSocket<D> implements Closeable {
             final Object object = receiver.receivedObjects.poll(timeout, TimeUnit.MILLISECONDS);
 
             if (object == null) {
+                log.info("receiving is timed out");
                 throw new SocketTimeoutException("receiving is timed out");
             }
 
             if (clazz.isInstance(object)) {
+                log.info("received object " + object);
                 return clazz.cast(object);
             }
         }
@@ -378,6 +408,7 @@ public abstract class UDPSocket<D> implements Closeable {
     @Override
     public void close() throws IOException {
         sendDatagram(makePacket(Action.FINISH, 0, ByteBuffer.allocate(0)));
+        log.info("close socket");
         closed = true;
     }
 
@@ -409,12 +440,14 @@ public abstract class UDPSocket<D> implements Closeable {
 
     private void assertNotConnected() {
         if (remote != null) {
+            log.info("socket is connected already");
             throw new IllegalStateException("socket is connected already");
         }
     }
 
     private void assertNotClosed() {
         if (closed) {
+            log.info("socket is closed");
             throw new IllegalStateException("socket is closed");
         }
     }

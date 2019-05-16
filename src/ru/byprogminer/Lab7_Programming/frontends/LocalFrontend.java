@@ -6,18 +6,15 @@ import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner.CommandHandler;
 import ru.byprogminer.Lab5_Programming.csv.CsvReader;
 import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
-import ru.byprogminer.Lab5_Programming.csv.CsvWriter;
-import ru.byprogminer.Lab5_Programming.csv.CsvWriterWithHeader;
 import ru.byprogminer.Lab7_Programming.Frontend;
-import ru.byprogminer.Lab7_Programming.LivingObjectWriter;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
-import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectWriter;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 import ru.byprogminer.Lab7_Programming.views.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.logging.Logger;
 

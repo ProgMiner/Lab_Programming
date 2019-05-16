@@ -1,6 +1,6 @@
 package ru.byprogminer.Lab7_Programming;
 
-import ru.byprogminer.Lab6_Programming.udp.UDPServerSocket;
+import ru.byprogminer.Lab6_Programming.udp.UdpServerSocket;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.frontends.LocalFrontend;
 import ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend;
@@ -144,7 +144,7 @@ public class ServerMain {
                     channel.bind(new InetSocketAddress(port));
                 }
 
-                final UDPServerSocket<?> serverSocket = UDPServerSocket.by(channel, PART_SIZE);
+                final UdpServerSocket<?> serverSocket = UdpServerSocket.by(channel, PART_SIZE);
                 tmpRemoteFrontend = new RemoteFrontend(serverSocket, collectionController);
 
                 final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);

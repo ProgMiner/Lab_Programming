@@ -140,7 +140,7 @@ public class Console implements StatusPrinter {
                 }
             }
 
-            runMutex.end();
+            runMutex.finish();
         }
     }
 

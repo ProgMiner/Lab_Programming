@@ -7,32 +7,32 @@ import java.nio.channels.DatagramChannel;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import static ru.byprogminer.Lab6_Programming.udp.UDPSocket.HEADER_SIZE;
+import static ru.byprogminer.Lab6_Programming.udp.UdpSocket.HEADER_SIZE;
 
-public abstract class UDPServerSocket<D> {
+public abstract class UdpServerSocket<D> {
 
     protected final int packetSize;
     protected final D device;
 
     private final Queue<SocketAddress> clients = new LinkedList<>();
 
-    public UDPServerSocket(D device, int packetSize) {
+    public UdpServerSocket(D device, int packetSize) {
         this.packetSize = packetSize;
         this.device = device;
     }
 
-    public static <D extends DatagramChannel> ChannelUDPServerSocket<D> by(D device, int packetSize) {
-        return new ChannelUDPServerSocket<>(device, packetSize);
+    public static <D extends DatagramChannel> ChannelUdpServerSocket<D> by(D device, int packetSize) {
+        return new ChannelUdpServerSocket<>(device, packetSize);
     }
 
-    public final UDPSocket<D> accept() throws IOException {
+    public final UdpSocket<D> accept() throws IOException {
         synchronized (clients) {
             while (clients.isEmpty()) {
                 receivePacket();
             }
 
             final SocketAddress address = clients.remove();
-            final UDPSocket<D> socket = makeSocket(device, packetSize);
+            final UdpSocket<D> socket = makeSocket(device, packetSize);
             socket.accept(address);
             return socket;
         }
@@ -43,7 +43,7 @@ public abstract class UDPServerSocket<D> {
         final SocketAddress address = receiveDatagram(packet);
         packet.flip();
 
-        if (packet.remaining() < HEADER_SIZE || packet.getInt() != UDPSocket.SIGNATURE) {
+        if (packet.remaining() < HEADER_SIZE || packet.getInt() != UdpSocket.SIGNATURE) {
             return;
         }
 
@@ -54,6 +54,10 @@ public abstract class UDPServerSocket<D> {
         clients.add(address);
     }
 
+    public D getDevice() {
+        return device;
+    }
+
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
-    protected abstract UDPSocket<D> makeSocket(D device, int packetSize);
+    protected abstract UdpSocket<D> makeSocket(D device, int packetSize);
 }

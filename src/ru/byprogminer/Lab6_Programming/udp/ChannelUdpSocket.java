@@ -5,9 +5,9 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 
-public class ChannelUDPSocket<D extends DatagramChannel> extends UDPSocket<D> {
+public class ChannelUdpSocket<D extends DatagramChannel> extends UdpSocket<D> {
 
-    public ChannelUDPSocket(D device, int packetSize) {
+    public ChannelUdpSocket(D device, int packetSize) {
         super(device, packetSize);
     }
 

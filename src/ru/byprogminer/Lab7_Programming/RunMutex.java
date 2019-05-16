@@ -57,14 +57,14 @@ public class RunMutex {
         return state.currentThreads.contains(Thread.currentThread()) && !state.isStopping();
     }
 
-    public void end() {
+    public void finish() {
         if (state.currentThreads.isEmpty()) {
             state.setStopping(false);
             return;
         }
 
         if (!state.currentThreads.contains(Thread.currentThread())) {
-            throw new RuntimeException("end from another thread");
+            throw new RuntimeException("finish from another thread");
         }
 
         synchronized (state) {
