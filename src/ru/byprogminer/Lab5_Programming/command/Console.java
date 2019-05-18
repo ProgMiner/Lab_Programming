@@ -14,7 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-public class Console implements StatusPrinter {
+public class Console {
 
     private final CommandRunner runner;
     private final PrintStream printer;
@@ -169,30 +169,25 @@ public class Console implements StatusPrinter {
         throw new IllegalArgumentException("unknown command " + command);
     }
 
-    @Override
     public void print(final Object msg) {
         log.info(String.format("print: %s", msg.toString()));
         printer.print(msg);
     }
 
-    @Override
     public void println(final Object msg) {
         log.info(String.format("println: %s", msg.toString()));
         printer.println(msg);
     }
 
-    @Override
     public void printf(final String format, final Object... args) {
         log.info(String.format("printf: %s", String.format(format, args)));
         printer.printf(format, (Object[]) args);
     }
 
-    @Override
     public void printError(final Object msg) {
         printf(translator.get("message.error"), msg);
     }
 
-    @Override
     public void printWarning(final Object msg) {
         printf(translator.get("message.warning"), msg);
     }
