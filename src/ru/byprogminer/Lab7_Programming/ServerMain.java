@@ -26,6 +26,7 @@ public class ServerMain {
     private static final class Status {
 
         private static final int UNKNOWN_ERROR = -1;
+
         private static final int LOGGING_CONFIG_ERROR = 1;
         private static final int BAD_PORT_PROVIDED = 2;
         private static final int CANNOT_REQUEST_DATA_TO_CONNECT_TO_DB = 3;

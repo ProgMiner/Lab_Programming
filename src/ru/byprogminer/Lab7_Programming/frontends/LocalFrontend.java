@@ -6,6 +6,7 @@ import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner;
 import ru.byprogminer.Lab5_Programming.command.ReflectionCommandRunner.CommandHandler;
 import ru.byprogminer.Lab5_Programming.csv.CsvReader;
 import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
+import ru.byprogminer.Lab7_Programming.Commands;
 import ru.byprogminer.Lab7_Programming.Frontend;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
@@ -23,29 +24,14 @@ import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
 
 public class LocalFrontend implements Frontend {
 
-    private class Commands {
-
-        private final String ELEMENT_DESCRIPTION = "" +
-                "  - element - living object in JSON format. Available fields:\n" +
-                "    - name - string - name, required;\n" +
-                "    - volume - double - volume;\n" +
-                "    - creatingTime - string/long - date and time of object creating in\n" +
-                "                                   locale-specific (similar to printing)\n" +
-                "                                   format or as unix timestamp (count of\n" +
-                "                                   seconds from the 1 Jan 1970 00:00:00;\n" +
-                "    - x - double - x coordinate;\n" +
-                "    - y - double - y coordinate;\n" +
-                "    - z - double - z coordinate;\n" +
-                "    - lives - boolean - current condition (lives or not);\n" +
-                "    - items - object[] - array of objects that owner is this living\n" +
-                "                         object. Each objects specifies in JSON object\n" +
-                "                         format. All fields from living object except\n" +
-                "                         `lives` and `items` is available";
+    private class CommandListener {
 
         //=== General commands ===//
 
-        @CommandHandler(usage = "help [command]", description = "" +
-                "Show available commands or description of the command if provided")
+        @CommandHandler(
+                usage = Commands.Help.USAGE,
+                description = Commands.Help.DESCRIPTION
+        )
         public void help() {
             console.printHelp(arrayOf());
         }
@@ -55,45 +41,56 @@ public class LocalFrontend implements Frontend {
             console.printHelp(arrayOf(command));
         }
 
-        @CommandHandler(description = "Exit from the application")
+        @CommandHandler(description = Commands.Exit.DESCRIPTION)
         public void exit() {
             console.quit();
         }
 
         //=== Collection commands ===//
 
-        @CommandHandler(usage = "add <element>", description = "" +
-                "Add the provided element to the collection\n" + ELEMENT_DESCRIPTION)
+        @CommandHandler(
+                usage = Commands.Add.USAGE,
+                description = Commands.Add.DESCRIPTION
+        )
         public void add(String elementJson) {
             render(collectionController.add(jsonToLivingObject(elementJson)));
         }
 
-        @CommandHandler(usage = "remove <element>", description = "" +
-                "Remove the provided element from the collection\n" + ELEMENT_DESCRIPTION)
+        @CommandHandler(
+                usage = Commands.Remove.USAGE,
+                description = Commands.Remove.DESCRIPTION
+        )
         public void remove(String elementJson) {
             render(collectionController.remove(jsonToLivingObject(elementJson)));
         }
 
-        @CommandHandler(alias = "remove_lower", usage = "remove_lower <element>", description = "" +
-                "Remove all elements that lower than the provided from the collection\n" + ELEMENT_DESCRIPTION)
+        @CommandHandler(
+                alias = Commands.RemoveLower.ALIAS,
+                usage = Commands.RemoveLower.USAGE,
+                description = Commands.RemoveLower.DESCRIPTION
+        )
         public void removeLower(String elementJson) {
             render(collectionController.removeLower(jsonToLivingObject(elementJson)));
         }
 
-        @CommandHandler(alias = "remove_greater", usage = "remove_greater <element>", description = "" +
-                "Remove all elements that greater than the provided from the collection\n" + ELEMENT_DESCRIPTION)
+        @CommandHandler(
+                alias = Commands.RemoveGreater.ALIAS,
+                usage = Commands.RemoveGreater.USAGE,
+                description = Commands.RemoveGreater.DESCRIPTION
+        )
         public void removeGreater(String elementJson) {
             render(collectionController.removeGreater(jsonToLivingObject(elementJson)));
         }
 
-        @CommandHandler(description = "Show information about the collection")
+        @CommandHandler(description = Commands.Info.DESCRIPTION)
         public void info() {
             render(collectionController.info());
         }
 
-        @CommandHandler(usage = "show [count]", description = "" +
-                "Show elements in the collection\n" +
-                "  - count - maximum count of elements, default all")
+        @CommandHandler(
+                usage = Commands.Show.USAGE,
+                description = Commands.Show.DESCRIPTION
+        )
         public void show() {
             render(collectionController.show());
         }
@@ -111,30 +108,34 @@ public class LocalFrontend implements Frontend {
             render(collectionController.show(count));
         }
 
-        @CommandHandler(description = "An alias for the `show` command")
+        @CommandHandler(description = Commands.Ls.DESCRIPTION)
         public void ls() {
             show();
         }
 
         //=== Import/export commands ===//
 
-        @CommandHandler(usage = "save <filename>", description = "" +
-                "Save collection to file in CSV format\n" +
-                "  - filename - name of file to save")
+        @CommandHandler(
+                usage = Commands.Save.USAGE,
+                description = Commands.Save.DESCRIPTION
+        )
         public void save(String filename) {
             render(collectionController.save(filename));
         }
 
-        @CommandHandler(usage = "load <filename>", description = "" +
-                "Load collection (instead of current) from file in CSV format\n" +
-                "  - filename - name of file to load")
+        @CommandHandler(
+                usage = Commands.Load.USAGE,
+                description = Commands.Load.DESCRIPTION
+        )
         public void load(String filename) {
             render(collectionController.load(filename));
         }
 
-        @CommandHandler(alias = "import", usage = "import <filename>", description = "" +
-                "Import elements from file\n" +
-                "  - filename - name of file to import")
+        @CommandHandler(
+                alias = Commands.Import.ALIAS,
+                usage = Commands.Import.USAGE,
+                description = Commands.Import.DESCRIPTION
+        )
         public void _import(String filename) {
             final Scanner scanner;
 
@@ -151,7 +152,7 @@ public class LocalFrontend implements Frontend {
 
     private static final Logger log = Loggers.getLogger(LocalFrontend.class.getName());
 
-    private final CommandRunner commandRunner = ReflectionCommandRunner.make(new Commands());
+    private final CommandRunner commandRunner = ReflectionCommandRunner.make(new CommandListener());
     private final Console console = new Console(commandRunner);
 
     private final CollectionController collectionController;
