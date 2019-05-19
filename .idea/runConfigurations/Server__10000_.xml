@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Server (10000)" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="ru.byprogminer.Lab7_Programming.ServerMain" />
+    <module name="Lab7_Programming" />
+    <option name="PROGRAM_PARAMETERS" value="10000" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

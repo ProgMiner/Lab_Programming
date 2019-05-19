@@ -85,6 +85,7 @@ public class RemoteFrontend implements Frontend {
                         }
 
                         socket.send(new Packet.Response.Done(view), CLIENT_TIMEOUT);
+                    } catch (SocketTimeoutException ignored) {
                     } catch (Throwable e) {
                         log.log(Level.INFO, "exception thrown", e);
                     }

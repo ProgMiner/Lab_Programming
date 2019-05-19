@@ -63,8 +63,8 @@ public class ServerMain {
                 System.exit(result);
             }
         } catch (Throwable e) {
-            System.err.println("An unknown error occurred. See logs for details or try again.");
             log.log(Level.SEVERE, "Unknown error", e);
+            System.err.println("An unknown error occurred. See logs for details or try again.");
             System.exit(Status.UNKNOWN_ERROR);
         }
     }
@@ -113,8 +113,8 @@ public class ServerMain {
         try {
             dbConnection = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
         } catch (SQLException e) {
-            System.err.println("Unable to connect to database. Check the URL, the username and the password and try again. Check logs for details.");
             log.log(Level.SEVERE, "Unable to connect to database", e);
+            System.err.println("Unable to connect to database. Check the URL, the username and the password and try again. Check logs for details.");
             return Status.CANNOT_CONNECT_TO_DB;
         }
 
@@ -122,8 +122,8 @@ public class ServerMain {
         try {
             collectionModel = new DatabaseCollectionModel(dbConnection);
         } catch (SQLException e) {
-            System.err.println("Unable to setup database connection. Check logs for details or try again.");
             log.log(Level.SEVERE, "An error occurred while collection model initializing", e);
+            System.err.println("Unable to setup database connection. Check logs for details or try again.");
             return Status.COLLECTION_MODEL_INIT_ERROR;
         }
 
