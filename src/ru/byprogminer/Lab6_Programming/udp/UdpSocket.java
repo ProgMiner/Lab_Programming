@@ -362,6 +362,8 @@ public abstract class UdpSocket<D> implements Closeable {
                 synchronized (previous) {
                     packet = makePacket(Action.TRANSPORT, count, objectBuffer);
                     hash = crc32(packet);
+
+                    log.info(String.format("rotate previous: %d -> %d", previous.get(), hash));
                     previous.set(hash);
                 }
 
@@ -370,7 +372,6 @@ public abstract class UdpSocket<D> implements Closeable {
 
                 packet.rewind();
                 sendDatagram(packet);
-
                 Thread.sleep(RESEND_DELAY);
                 while (!closed && receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
                     try {

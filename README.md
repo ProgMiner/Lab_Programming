@@ -3,14 +3,7 @@
 ## Checklist
 
   - [X] `java.time.LocalDateTime`
-  - [ ] Add database use
-    - [X] Add metadata model
-    - [ ] Add collection model
-    - [ ] Add collection controller
-    - [ ] Add local frontend
-    - [ ] Add remote frontend
-      - [ ] Rewrite UDP sockets
-      - [ ] Rewrite client-side
+  - [X] Add database use
   - [ ] Users registration and authorization
     - [ ] Add users model
       - [ ] Add `User` class
