@@ -9,8 +9,6 @@ import java.math.RoundingMode;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -62,11 +60,6 @@ public abstract class UdpSocket<D> implements Closeable {
          * Buffer of receiving object
          */
         private volatile ByteBuffer receivingObject = null;
-
-        /**
-         * Pull of received but not processed packets
-         */
-        private final Map<Long, ByteBuffer> pool = new HashMap<>();
 
         /**
          * Previous received and processed packet hash
@@ -137,48 +130,44 @@ public abstract class UdpSocket<D> implements Closeable {
             packet.getInt(); // Skip Signature
 
             final Action action = Action.by(packet.get());
-            final Long previous = packet.getLong();
+            final long previous = packet.getLong();
             packet.rewind();
 
             switch (action) {
                 case CONNECT:
                     return;
 
-                case TRANSPORT:
-                    final long hash = crc32(packet);
-                    packet.rewind();
+                case CONFIRM:
+                    expectedConfirmations.remove(previous);
 
+                    return;
+            }
+
+            final long hash = crc32(packet);
+            packet.rewind();
+
+            switch (action) {
+                case TRANSPORT:
                     sendDatagram(makePacket(Action.CONFIRM, hash, 0, ByteBuffer.allocate(0)));
 
                 case FINISH:
-                    pool.putIfAbsent(previous, packet);
-
-                    processPool();
-                    return;
-
-                case CONFIRM:
-                    expectedConfirmations.remove(previous);
+                    if (rotatePrevious(previous, hash)) {
+                        processPacket(packet);
+                    }
             }
         }
 
-        private void processPool() throws IOException, InterruptedException, ClassNotFoundException {
-            synchronized (pool) {
-                long previous = this.previous.get();
-
-                ByteBuffer packet;
-                while ((packet = pool.remove(previous)) != null) {
-                    previous = crc32(packet);
-                    packet.rewind();
-
-                    processPacket(packet);
-                }
-
+        private boolean rotatePrevious(long previous, long current) {
+            synchronized (this.previous) {
                 if (this.previous.get() != previous) {
-                    log.info(String.format("rotate previous: %d -> %d", this.previous.get(), previous));
+                    return false;
                 }
 
-                this.previous.set(previous);
+                log.info(String.format("rotate previous: %d -> %d", previous, current));
+                this.previous.set(current);
             }
+
+            return true;
         }
 
         private void processPacket(ByteBuffer packet) throws IOException, InterruptedException, ClassNotFoundException {
@@ -239,7 +228,7 @@ public abstract class UdpSocket<D> implements Closeable {
                     packetStart.append(", ");
                 }
 
-                packetStart.append(String.format("0x%X", packet.get()));
+                packetStart.append(String.format("0x%02X", packet.get()));
             }
 
             if (packet.hasRemaining()) {
