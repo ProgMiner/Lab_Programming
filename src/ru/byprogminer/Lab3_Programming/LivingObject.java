@@ -3,6 +3,7 @@ package ru.byprogminer.Lab3_Programming;
 import ru.byprogminer.Lab4_Programming.DeathException;
 import ru.byprogminer.Lab4_Programming.NotFoundException;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -12,7 +13,7 @@ import java.util.stream.Collectors;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
-public abstract class LivingObject extends Object implements Hitter, Picker, Movable, Thinkable, Comparable<LivingObject> {
+public class LivingObject extends Object implements Hitter, Picker, Movable, Thinkable, Comparable<LivingObject> {
 
     private static final String STRING_FORMAT = "LivingObject %s with volume %s at (%s, %s, %s) created %s, currently %s, %s";
 
@@ -20,8 +21,16 @@ public abstract class LivingObject extends Object implements Hitter, Picker, Mov
 
     private volatile boolean lives = true;
 
-    public LivingObject(final String name) {
+    public LivingObject(String name) {
         super(name);
+    }
+
+    public LivingObject(String name, double volume, LocalDateTime creatingTime) {
+        super(name, volume, creatingTime);
+    }
+
+    public LivingObject(String name, double volume, LocalDateTime creatingTime, double x, double y, double z) {
+        super(name, volume, creatingTime, x, y, z);
     }
 
     public Set<Object> getItems() {

@@ -15,14 +15,21 @@ import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.DatagramChannel;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.callIfNotNull;
+import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
+import static ru.byprogminer.Lab7_Programming.ClientMain.SERVER_TIMEOUT;
 
 public class RemoteFrontend implements Frontend {
 
     private class ClientHandler implements Runnable {
 
-        private final Logger log = clientHandlerLog;
+        private final Logger log = Loggers.getObjectLogger(this);
 
         private final UdpSocket<?> socket;
 
@@ -39,9 +46,22 @@ public class RemoteFrontend implements Frontend {
         @Override
         public void run() {
             try {
-                while (runMutex.isRunning()) {
+                while (!socket.isClosed() && runMutex.isRunning()) {
                     try {
                         final Request request = socket.receive(Request.class, SO_TIMEOUT);
+
+                        final AtomicBoolean finish = new AtomicBoolean();
+                        new Thread(() -> {
+                            while (!finish.get() && !socket.isClosed()) {
+                                try {
+                                    socket.send(new Packet.Response.Ping(), PING_TIMEOUT);
+                                    Thread.sleep(PING_TIMEOUT);
+                                } catch (InterruptedException | SocketTimeoutException ignored) {
+                                } catch (Throwable e) {
+                                    log.log(Level.INFO, "exception thrown", e);
+                                }
+                            }
+                        }).start();
 
                         final View view;
                         if (request instanceof Request.Add) {
@@ -84,30 +104,30 @@ public class RemoteFrontend implements Frontend {
                             view = null;
                         }
 
+                        finish.set(true);
                         socket.send(new Packet.Response.Done(view), CLIENT_TIMEOUT);
-                    } catch (SocketTimeoutException ignored) {
+                    } catch (InterruptedException | SocketTimeoutException ignored) {
                     } catch (Throwable e) {
                         log.log(Level.INFO, "exception thrown", e);
                     }
                 }
+
+                runMutex.finish();
             } finally {
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    log.log(Level.INFO, "exception thrown", e);
-                }
+                log.info("handler finished");
+                socket.close();
             }
         }
     }
 
-    private static final int SO_TIMEOUT = 1000;
-    private static final int CLIENT_TIMEOUT = 10000;
+    public static final int SO_TIMEOUT = 1000;
+    public static final int CLIENT_TIMEOUT = 10000;
+    public static final int PING_TIMEOUT = SERVER_TIMEOUT / 10;
 
-    private static final Logger log = Loggers.getLogger(RemoteFrontend.class.getName());
-    private static final Logger clientHandlerLog = Loggers.getLogger(ClientHandler.class.getName());
+    private final Logger log = Loggers.getObjectLogger(this);
 
     private final RunMutex runMutex = new RunMutex();
-
+    private final Map<Thread, UdpSocket<?>> threadSockets = new ConcurrentHashMap<>();
     private final CollectionController collectionController;
     private final UdpServerSocket<?> serverSocket;
 
@@ -129,14 +149,20 @@ public class RemoteFrontend implements Frontend {
             throw new IllegalStateException("this frontend is running already");
         }
 
+        log.info("frontend executed");
         while (runMutex.isRunning()) {
             try {
-                final Thread clientHandlerThread = new Thread(new ClientHandler(serverSocket.accept()));
+                final UdpSocket<?> socket = serverSocket.accept();
+                final ClientHandler clientHandler = new ClientHandler(socket);
+                final Thread clientHandlerThread = new Thread(clientHandler);
+
+                clientHandlerThread.setName("Remote frontend's client handler #" + System.identityHashCode(clientHandler));
                 runMutex.shareRun(clientHandlerThread);
+                threadSockets.put(clientHandlerThread, socket);
                 clientHandlerThread.start();
             } catch (SocketTimeoutException ignored) {
             } catch (Throwable e) {
-                log.log(Level.INFO, "exception in accept loop", e);
+                log.log(Level.INFO, "exception in accepting loop", e);
             }
         }
 
@@ -146,7 +172,17 @@ public class RemoteFrontend implements Frontend {
     @Override
     public void stop() {
         runMutex.stop();
-        runMutex.getCurrentThreads().forEach(Thread::interrupt);
+        runMutex.getCurrentThreads().forEach(thread -> {
+            try {
+                throwing().unwrap(IOException.class, () ->
+                        callIfNotNull(threadSockets.get(thread),
+                                throwing().consumer(UdpSocket::close)));
+            } catch (IOException e) {
+                log.log(Level.SEVERE, "exception thrown", e);
+            } finally {
+                thread.interrupt();
+            }
+        });
     }
 
     private <D> void setDeviceSoTimeout(D device) throws SocketException {

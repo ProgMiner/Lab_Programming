@@ -31,7 +31,7 @@ public final class LabUtils {
         T construct(String name);
     }
 
-    private static Logger log = Loggers.getLogger(LabUtils.class.getName());
+    private static Logger log = Loggers.getClassLogger(LabUtils.class);
 
     private LabUtils() {}
 
@@ -86,14 +86,6 @@ public final class LabUtils {
             log.log(Level.WARNING, cause, e);
             throw exceptionConstructor.apply(cause, e);
         }
-    }
-
-    public static Object objectConstructor(String name) {
-        return new Object(name) {};
-    }
-
-    public static LivingObject livingObjectConstructor(String name) {
-        return new LivingObject(name) {};
     }
 
     public static void setLivingObjectLives(final LivingObject object, final Boolean lives) {
@@ -173,17 +165,18 @@ public final class LabUtils {
 
             exception = "an error occurred while living object constructing";
             LivingObject livingObject = mapToObject(jsonObject.entrySet().parallelStream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
-                    LabUtils::livingObjectConstructor);
+                            .collect(Collectors.toMap(Map.Entry::getKey, e ->
+                                    e.getValue().toString())), LivingObject::new);
 
             callIf(jsonObject.get("lives"), Boolean.class::isInstance, lives ->
                     setLivingObjectLives(livingObject, (Boolean) lives));
 
-            callIf(jsonObject.get("items"), Collection.class::isInstance, items -> ((Collection<?>) items).parallelStream()
-                    .forEach(_item -> callIf(_item, JSONObject.class::isInstance, item -> livingObject.getItems()
-                            .add(mapToObject(((Map<String, ?>) item).entrySet().parallelStream()
-                                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString())),
-                                    LabUtils::objectConstructor)))));
+            callIf(jsonObject.get("items"), Collection.class::isInstance, items ->
+                    ((Collection<?>) items).parallelStream().forEach(_item ->
+                            callIf(_item, JSONObject.class::isInstance, item -> livingObject.getItems()
+                                    .add(mapToObject(((Map<String, ?>) item).entrySet().parallelStream()
+                                                    .collect(Collectors.toMap(Map.Entry::getKey, e ->
+                                                            e.getValue().toString())), Object::new)))));
 
             return livingObject;
         } catch (Throwable e) {

@@ -23,10 +23,23 @@ public final class Loggers {
         logManager.readConfiguration(is);
     }
 
+    @Deprecated
     public static Logger getLogger(String name) {
+        return makeLogger(name);
+    }
+
+    private static Logger makeLogger(String name) {
         final Logger logger = Logger.getLogger(name);
         logger.setLevel(DEFAULT_LOGLEVEL);
 
         return logger;
+    }
+
+    public static Logger getClassLogger(Class<?> clazz) {
+        return makeLogger(clazz.getName());
+    }
+
+    public static Logger getObjectLogger(Object object) {
+        return makeLogger(object.getClass().getName() + "#" + System.identityHashCode(object));
     }
 }

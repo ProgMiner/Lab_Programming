@@ -41,7 +41,7 @@ public abstract class UdpSocket<D> implements Closeable {
      */
     private class Receiver {
 
-        private final Logger log = receiverLog;
+        private final Logger log = Loggers.getObjectLogger(this);
 
         /**
          * {@link Thread} object of this Receiver
@@ -84,6 +84,7 @@ public abstract class UdpSocket<D> implements Closeable {
             }
 
             thread = new Thread(this::run);
+            thread.setName("UDP socket's #" + System.identityHashCode(UdpSocket.this) + " receiver");
             thread.start();
         }
 
@@ -93,7 +94,7 @@ public abstract class UdpSocket<D> implements Closeable {
             while (!closed) {
                 try {
                     receivePacket();
-                } catch (SocketTimeoutException ignored) {
+                } catch (InterruptedException | SocketTimeoutException ignored) {
                 } catch (Throwable e) {
                     log.log(Level.INFO, "exception in receiver loop", e);
                 }
@@ -108,13 +109,15 @@ public abstract class UdpSocket<D> implements Closeable {
         private void receivePacket() throws IOException, InterruptedException, ClassNotFoundException {
             final ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
             final SocketAddress address = receiveDatagram(buffer);
-            log.info("received packet");
             buffer.flip();
 
             final ByteBuffer packet = buffer.asReadOnlyBuffer();
             if (buffer.remaining() < HEADER_SIZE || buffer.getInt() != SIGNATURE) {
                 return;
             }
+
+            log.info("received packet: " + packetToString(packet));
+            packet.rewind();
 
             final Action action = Action.by(buffer.get());
             if (action == Action.CONNECT) {
@@ -170,7 +173,10 @@ public abstract class UdpSocket<D> implements Closeable {
                     processPacket(packet);
                 }
 
-                log.info(String.format("rotate previous %d -> %d", this.previous.get(), previous));
+                if (this.previous.get() != previous) {
+                    log.info(String.format("rotate previous: %d -> %d", this.previous.get(), previous));
+                }
+
                 this.previous.set(previous);
             }
         }
@@ -213,10 +219,35 @@ public abstract class UdpSocket<D> implements Closeable {
 
                 final ObjectInputStream stream = new ObjectInputStream(new ByteArrayInputStream(buffer));
                 final Object receivedObject = stream.readObject();
-                log.info("received object " + receivedObject);
+                log.info("received object: " + receivedObject);
                 receivedObjects.put(receivedObject);
                 stream.close();
             }
+        }
+
+        private String packetToString(ByteBuffer packet) {
+            packet.getInt(); // Skip Signature
+
+            final Action action = Action.by(packet.get());
+            final long previous = packet.getLong();
+            final byte count = packet.get();
+            final int contentSize = packet.remaining();
+
+            final StringBuilder packetStart = new StringBuilder();
+            for (int i = 0; i < 3 && packet.hasRemaining(); ++i) {
+                if (i != 0) {
+                    packetStart.append(", ");
+                }
+
+                packetStart.append(String.format("0x%X", packet.get()));
+            }
+
+            if (packet.hasRemaining()) {
+                packetStart.append("...");
+            }
+
+            return String.format("%2$d -> %1$s/%3$d new byte[%4$d] {%5$s}",
+                    action, previous, count, contentSize, packetStart);
         }
     }
 
@@ -231,8 +262,7 @@ public abstract class UdpSocket<D> implements Closeable {
     public static final int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
 
     // Logging
-    private static final Logger log = Loggers.getLogger(UdpSocket.class.getName());
-    private static final Logger receiverLog = Loggers.getLogger(UdpSocket.Receiver.class.getName());
+    private final Logger log = Loggers.getObjectLogger(this);
 
     // General
     protected volatile SocketAddress remote = null;
@@ -282,7 +312,7 @@ public abstract class UdpSocket<D> implements Closeable {
 
         log.info("try to connect to server");
         final long start = System.currentTimeMillis();
-        while (remote == null && System.currentTimeMillis() - start < timeout) {
+        while (!closed && remote == null && System.currentTimeMillis() - start < timeout) {
             Thread.yield();
         }
 
@@ -316,7 +346,7 @@ public abstract class UdpSocket<D> implements Closeable {
      * @throws IllegalStateException if socket isn't connected
      * @throws SocketTimeoutException if time is out
      */
-    public final void send(Object object, long timeout) throws IOException {
+    public final void send(Object object, long timeout) throws IOException, InterruptedException {
         if (remote == null) {
             log.info("socket isn't connected");
             throw new IllegalStateException("socket isn't connected");
@@ -336,7 +366,7 @@ public abstract class UdpSocket<D> implements Closeable {
 
             int i;
             final long start = System.currentTimeMillis();
-            for (i = 0; i <= count && System.currentTimeMillis() - start < timeout; ++i) {
+            for (i = 0; i <= count && !closed && System.currentTimeMillis() - start < timeout; ++i) {
                 final ByteBuffer packet;
                 final Long hash;
 
@@ -347,21 +377,29 @@ public abstract class UdpSocket<D> implements Closeable {
                 }
 
                 receiver.expectedConfirmations.add(hash);
-                log.info(String.format("send %d/%d object packet", i, count));
+                log.info(String.format("send %d/%d packet", i, count));
 
                 packet.rewind();
                 sendDatagram(packet);
-                while (receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
+
+                Thread.sleep(RESEND_DELAY);
+                while (!closed && receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
                     try {
-                        Thread.sleep(RESEND_DELAY);
-                        log.info(String.format("resend %d/%d object packet", i, count));
+                        log.info(String.format("resend %d/%d packet", i, count));
 
                         packet.rewind();
                         sendDatagram(packet);
+                        Thread.sleep(RESEND_DELAY);
+                    } catch (InterruptedException | SocketTimeoutException ignored) {
                     } catch (Throwable e) {
-                        log.log(Level.INFO, "exception in send loop", e);
+                        log.log(Level.INFO, "exception in resending loop", e);
                     }
                 }
+            }
+
+            if (closed) {
+                log.info("socket closed while sending");
+                throw new IllegalStateException("socked closed");
             }
 
             if (i <= count) {
@@ -387,29 +425,44 @@ public abstract class UdpSocket<D> implements Closeable {
     public final <T> T receive(Class<? extends T> clazz, long timeout) throws InterruptedException, SocketTimeoutException {
         assertNotClosed();
 
-        while (true) {
+        final long start = System.currentTimeMillis();
+        while (!closed && System.currentTimeMillis() - start <= timeout) {
             final Object object = receiver.receivedObjects.poll(timeout, TimeUnit.MILLISECONDS);
 
-            if (object == null) {
-                log.info("receiving is timed out");
-                throw new SocketTimeoutException("receiving is timed out");
-            }
-
             if (clazz.isInstance(object)) {
-                log.info("received object " + object);
+                log.info("received object: " + object);
                 return clazz.cast(object);
             }
         }
+
+        if (closed) {
+            log.info("socket closed while receiving");
+            throw new IllegalStateException("socked closed");
+        }
+
+        log.info("receiving is timed out");
+        throw new SocketTimeoutException("receiving is timed out");
     }
 
     /**
      * Closes socket
      */
     @Override
-    public void close() throws IOException {
-        sendDatagram(makePacket(Action.FINISH, 0, ByteBuffer.allocate(0)));
+    public void close() {
+        if (closed) {
+            return;
+        }
+
         log.info("close socket");
+
+        try {
+            sendDatagram(makePacket(Action.FINISH, 0, ByteBuffer.allocate(0)));
+        } catch (IOException e) {
+            log.log(Level.WARNING, "unable to send FINISH packet", e);
+        }
+
         closed = true;
+        receiver.thread.interrupt();
     }
 
     private ByteBuffer makePacket(Action action, int count, ByteBuffer content) {

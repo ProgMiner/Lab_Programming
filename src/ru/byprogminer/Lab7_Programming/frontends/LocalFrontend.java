@@ -8,11 +8,11 @@ import ru.byprogminer.Lab5_Programming.csv.CsvReader;
 import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
 import ru.byprogminer.Lab7_Programming.Commands;
 import ru.byprogminer.Lab7_Programming.Frontend;
-import ru.byprogminer.Lab7_Programming.View;
+import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
-import ru.byprogminer.Lab7_Programming.views.*;
+import ru.byprogminer.Lab7_Programming.renderers.ConsoleRenderer;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -53,7 +53,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.Add.DESCRIPTION
         )
         public void add(String elementJson) {
-            render(collectionController.add(jsonToLivingObject(elementJson)));
+            renderer.render(collectionController.add(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(
@@ -61,7 +61,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.Remove.DESCRIPTION
         )
         public void remove(String elementJson) {
-            render(collectionController.remove(jsonToLivingObject(elementJson)));
+            renderer.render(collectionController.remove(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(
@@ -70,7 +70,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.RemoveLower.DESCRIPTION
         )
         public void removeLower(String elementJson) {
-            render(collectionController.removeLower(jsonToLivingObject(elementJson)));
+            renderer.render(collectionController.removeLower(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(
@@ -79,12 +79,12 @@ public class LocalFrontend implements Frontend {
                 description = Commands.RemoveGreater.DESCRIPTION
         )
         public void removeGreater(String elementJson) {
-            render(collectionController.removeGreater(jsonToLivingObject(elementJson)));
+            renderer.render(collectionController.removeGreater(jsonToLivingObject(elementJson)));
         }
 
         @CommandHandler(description = Commands.Info.DESCRIPTION)
         public void info() {
-            render(collectionController.info());
+            renderer.render(collectionController.info());
         }
 
         @CommandHandler(
@@ -92,7 +92,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.Show.DESCRIPTION
         )
         public void show() {
-            render(collectionController.show());
+            renderer.render(collectionController.show());
         }
 
         @CommandHandler
@@ -105,7 +105,7 @@ public class LocalFrontend implements Frontend {
                 throw new IllegalArgumentException("count has bad format", e);
             }
 
-            render(collectionController.show(count));
+            renderer.render(collectionController.show(count));
         }
 
         @CommandHandler(description = Commands.Ls.DESCRIPTION)
@@ -120,7 +120,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.Save.DESCRIPTION
         )
         public void save(String filename) {
-            render(collectionController.save(filename));
+            renderer.render(collectionController.save(filename));
         }
 
         @CommandHandler(
@@ -128,7 +128,7 @@ public class LocalFrontend implements Frontend {
                 description = Commands.Load.DESCRIPTION
         )
         public void load(String filename) {
-            render(collectionController.load(filename));
+            renderer.render(collectionController.load(filename));
         }
 
         @CommandHandler(
@@ -145,15 +145,16 @@ public class LocalFrontend implements Frontend {
                 throw new IllegalArgumentException("file not found", e);
             }
 
-            render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
+            renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
                     new CsvReader(scanner))).getObjects()));
         }
     }
 
-    private static final Logger log = Loggers.getLogger(LocalFrontend.class.getName());
+    private final Logger log = Loggers.getObjectLogger(this);
 
     private final CommandRunner commandRunner = ReflectionCommandRunner.make(new CommandListener());
     private final Console console = new Console(commandRunner);
+    private final Renderer renderer = new ConsoleRenderer(console);
 
     private final CollectionController collectionController;
 
@@ -173,98 +174,5 @@ public class LocalFrontend implements Frontend {
     public void stop() {
         log.info("stop frontend");
         console.quit();
-    }
-
-    private void render(View view) {
-        if (view.error != null) {
-            console.printError(view.error + ". Please try again or consult a specialist");
-        }
-
-        if (view instanceof InfoView) {
-            final InfoView infoView = (InfoView) view;
-
-            infoView.metadata.forEach((key, value) ->
-                    console.printf("%s: %s\n", key, value));
-
-            return;
-        }
-
-        if (view instanceof ShowView) {
-            final ShowView showView = (ShowView) view;
-
-            showView.elements.forEach(console::println);
-            return;
-        }
-
-        if (view instanceof AddView) {
-            final ModifyView modifyView = (ModifyView) view;
-
-            if (view.error == null && modifyView.affectedRows == 0) {
-                console.printWarning("no one elements added");
-            } else if (modifyView.affectedRows == 1) {
-                console.println("One element added.");
-            } else {
-                console.printf("%s elements added.\n", modifyView.affectedRows);
-            }
-
-            return;
-        }
-
-        if (view instanceof RemoveView) {
-            final ModifyView modifyView = (ModifyView) view;
-
-            if (view.error == null && modifyView.affectedRows == 0) {
-                console.printWarning("no one elements removed");
-            } else if (modifyView.affectedRows == 1) {
-                console.println("One element removed.");
-            } else {
-                console.printf("%s elements removed.\n", modifyView.affectedRows);
-            }
-
-            return;
-        }
-
-        if (view instanceof ImportView) {
-            final ModifyView modifyView = (ModifyView) view;
-
-            if (view.error == null && modifyView.affectedRows == 0) {
-                console.printWarning("no one elements imported");
-            } else if (modifyView.affectedRows == 1) {
-                console.println("One element imported.");
-            } else {
-                console.printf("%s elements imported.\n", modifyView.affectedRows);
-            }
-
-            return;
-        }
-
-        if (view instanceof ModifyView) {
-            final ModifyView modifyView = (ModifyView) view;
-
-            if (view.error == null && modifyView.affectedRows == 0) {
-                console.printWarning("no one elements affected");
-            } else if (modifyView.affectedRows == 1) {
-                console.println("One element affected.");
-            } else {
-                console.printf("%s elements affected.\n", modifyView.affectedRows);
-            }
-
-            return;
-        }
-
-        if (view.error == null) {
-            if (view instanceof LoadView) {
-                final LoadView loadView = (LoadView) view;
-
-                console.printf("Loaded from %s.\n", loadView.filename);
-                return;
-            }
-
-            if (view instanceof SaveView) {
-                final SaveView saveView = (SaveView) view;
-
-                console.printf("Saved to %s.\n", saveView.filename);
-            }
-        }
     }
 }

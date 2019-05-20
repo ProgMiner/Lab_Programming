@@ -37,12 +37,15 @@ public class Formatter extends java.util.logging.Formatter {
 
     @Override
     public String format(LogRecord record) {
-        final CharArrayWriter writer = new CharArrayWriter();
+        final String thrown;
 
         if (record.getThrown() != null) {
-            writer.write('\n');
+            final CharArrayWriter writer = new CharArrayWriter();
 
             record.getThrown().printStackTrace(new PrintWriter(writer));
+            thrown = '\n' + writer.toString().trim();
+        } else {
+            thrown = "";
         }
 
         return String.format(format,
@@ -51,6 +54,6 @@ public class Formatter extends java.util.logging.Formatter {
                 Thread.currentThread().getName(),
                 record.getLevel(),
                 record.getMessage(),
-                writer.toString());
+                thrown);
     }
 }

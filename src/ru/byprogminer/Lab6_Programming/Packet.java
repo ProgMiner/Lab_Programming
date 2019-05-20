@@ -62,9 +62,9 @@ public abstract class Packet implements Serializable {
 
         public static final class Show extends Request {
 
-            public final int count;
+            public final long count;
 
-            public Show(int count) {
+            public Show(long count) {
                 this.count = count;
             }
         }
@@ -97,7 +97,9 @@ public abstract class Packet implements Serializable {
 
     public abstract static class Response extends Packet {
 
-        public static class Done extends Response {
+        public static final class Ping extends Response {}
+
+        public static final class Done extends Response {
 
             public final View view;
 

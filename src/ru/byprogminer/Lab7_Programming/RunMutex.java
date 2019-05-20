@@ -69,7 +69,10 @@ public class RunMutex {
 
         synchronized (state) {
             state.currentThreads.remove(Thread.currentThread());
-            state.setStopping(false);
+
+            if (state.currentThreads.isEmpty()) {
+                state.setStopping(false);
+            }
         }
     }
 

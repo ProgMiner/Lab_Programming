@@ -9,7 +9,7 @@ import java.util.Objects;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
-public abstract class Object implements Serializable {
+public class Object implements Serializable {
 
     public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
 

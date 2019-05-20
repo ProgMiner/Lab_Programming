@@ -241,7 +241,7 @@ public class DatabaseCollectionModel implements CollectionModel {
     private static final String DEFAULT_ITEMS_ITEMS_TABLE_NAME = "items_items";
     private static final String DEFAULT_ITEMS_TABLE_NAME = "items";
 
-    private static final Logger log = Loggers.getLogger(DatabaseCollectionModel.class.getName());
+    private final Logger log = Loggers.getObjectLogger(this);
 
     private final Connection connection;
     private final String metadataTableName;
@@ -520,15 +520,8 @@ public class DatabaseCollectionModel implements CollectionModel {
             final boolean lives = livingObjectsResult.getBoolean(++pointer);
             final Integer items = livingObjectsResult.getInt(++pointer);
 
-            final LivingObject livingObject = new LivingObject(name) {{
-                setVolume(volume);
-                setCreatingTime(creatingTime.toLocalDateTime());
-                setX(x);
-                setY(y);
-                setZ(z);
-                setLivingObjectLives(this, lives);
-            }};
-
+            final LivingObject livingObject = new LivingObject(name, volume, creatingTime.toLocalDateTime(), x, y, z);
+            setLivingObjectLives(livingObject, lives);
             livingObjects.put(livingObject, items);
         }
 
@@ -550,7 +543,7 @@ public class DatabaseCollectionModel implements CollectionModel {
 
             items.computeIfAbsent(hashCode, integer ->
                     new HashSet<>()).add(new Object(name, volume,
-                    creatingTime.toLocalDateTime(), x, y, z) {});
+                    creatingTime.toLocalDateTime(), x, y, z));
         }
 
         itemsResult.close();

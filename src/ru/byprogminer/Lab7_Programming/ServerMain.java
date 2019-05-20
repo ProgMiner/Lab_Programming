@@ -44,7 +44,7 @@ public class ServerMain {
     private static final String DB_PROPERTIES = "/db.properties";
 
     private static final Scanner stdinScanner = new Scanner(System.in);
-    private static final Logger log = Loggers.getLogger(ServerMain.class.getName());
+    private static final Logger log = Loggers.getClassLogger(ServerMain.class);
 
     public static void main(String[] args) {
         try {
@@ -149,6 +149,7 @@ public class ServerMain {
                 tmpRemoteFrontend = new RemoteFrontend(serverSocket, collectionController);
 
                 final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);
+                remoteFrontendThread.setName("Remote frontend");
                 remoteFrontendThread.start();
 
                 while (remoteFrontendThread.getState() != Thread.State.RUNNABLE) {

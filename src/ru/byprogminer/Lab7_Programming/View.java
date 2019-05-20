@@ -1,6 +1,8 @@
 package ru.byprogminer.Lab7_Programming;
 
-public abstract class View {
+import java.io.Serializable;
+
+public abstract class View implements Serializable {
 
     public final String error;
 

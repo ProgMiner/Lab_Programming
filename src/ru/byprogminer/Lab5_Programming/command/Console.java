@@ -24,7 +24,7 @@ public class Console {
 
     private volatile long maxMistakeCount = 3;
 
-    private final Logger log = Loggers.getLogger(Console.class.getName());
+    private final Logger log = Loggers.getObjectLogger(this);
 
     @SuppressWarnings("unchecked")
     private final Map<String, String> translator =
