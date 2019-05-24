@@ -2,7 +2,7 @@ package ru.byprogminer.Lab7_Programming.views;
 
 import ru.byprogminer.Lab7_Programming.View;
 
-public class ModifyView extends View {
+public abstract class ModifyView extends View {
 
     final public int affectedRows;
 

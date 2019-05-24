@@ -20,6 +20,21 @@ public class ConsoleRenderer implements Renderer {
             console.printError(view.error + ". Please try again or consult a specialist");
         }
 
+        if (view instanceof NotLoggedView) {
+            console.printError("you are not logged in");
+            return;
+        }
+
+        if (view instanceof WrongCredentialsView) {
+            console.printError("wrong password or user is not exists");
+            return;
+        }
+
+        if (view instanceof NotPermittedView) {
+            console.printError("you don't have permission");
+            return;
+        }
+
         if (view instanceof InfoView) {
             final InfoView infoView = (InfoView) view;
 
@@ -104,6 +119,29 @@ public class ConsoleRenderer implements Renderer {
                 final SaveView saveView = (SaveView) view;
 
                 console.printf("Saved to %s.\n", saveView.filename);
+                return;
+            }
+
+            if (view instanceof ChangePasswordView) {
+                console.println("Password changed successfully.");
+                return;
+            }
+        }
+
+        if (view instanceof RegisterView) {
+            final RegisterView registerView = (RegisterView) view;
+
+            if (view.error == null && !registerView.ok) {
+                console.printWarning(String.format("user %s wasn't registered", registerView.username));
+            } else {
+                console.printf("User %s was registered successfully.\n", registerView.username);
+
+                if (registerView.password == null) {
+                    console.printf("On address %s has sent mail with password.\n", registerView.email);
+                } else {
+                    console.printWarning(String.format("An error occurred while mail sending. Password of user %s: %s",
+                            registerView.username, registerView.password));
+                }
             }
         }
     }

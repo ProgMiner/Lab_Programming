@@ -1,8 +1,8 @@
 package ru.byprogminer.Lab7_Programming;
 
-public abstract class Commands {
+public final class Commands {
 
-    public static abstract class Help {
+    public static final class Help {
 
         public static final String USAGE = "help [command]";
         public static final String DESCRIPTION = "" +
@@ -11,14 +11,14 @@ public abstract class Commands {
         private Help() {}
     }
 
-    public static abstract class Exit {
+    public static final class Exit {
 
         public static final String DESCRIPTION = "Exit from the application";
 
         private Exit() {}
     }
 
-    public static abstract class Add {
+    public static final class Add {
 
         public static final String USAGE = "add <element>";
         public static final String DESCRIPTION = "" +
@@ -28,7 +28,7 @@ public abstract class Commands {
         private Add() {}
     }
 
-    public static abstract class Remove {
+    public static final class Remove {
 
         public static final String USAGE = "remove <element>";
         public static final String DESCRIPTION = "" +
@@ -38,7 +38,17 @@ public abstract class Commands {
         private Remove() {}
     }
 
-    public static abstract class RemoveLower {
+    public static final class Rm {
+
+        public static final String USAGE = "rm <element>";
+        public static final String DESCRIPTION = "" +
+                "Alias for `remove` command\n" +
+                ELEMENT_DESCRIPTION;
+
+        private Rm() {}
+    }
+
+    public static final class RemoveLower {
 
         public static final String ALIAS = "remove_lower";
         public static final String USAGE = "remove_lower <element>";
@@ -49,7 +59,7 @@ public abstract class Commands {
         private RemoveLower() {}
     }
 
-    public static abstract class RemoveGreater {
+    public static final class RemoveGreater {
 
         public static final String ALIAS = "remove_greater";
         public static final String USAGE = "remove_greater <element>";
@@ -60,14 +70,14 @@ public abstract class Commands {
         private RemoveGreater() {}
     }
 
-    public static abstract class Info {
+    public static final class Info {
 
         public static final String DESCRIPTION = "Show information about the collection";
 
         private Info() {}
     }
 
-    public static abstract class Show {
+    public static final class Show {
 
         public static final String USAGE = "show [count]";
         public static final String DESCRIPTION = "" +
@@ -77,14 +87,14 @@ public abstract class Commands {
         private Show() {}
     }
 
-    public static abstract class Ls {
+    public static final class Ls {
 
         public static final String DESCRIPTION = "An alias for the `show` command";
 
         private Ls() {}
     }
 
-    public static abstract class Save {
+    public static final class Save {
 
         public static final String USAGE = "save <filename>";
         public static final String DESCRIPTION = "" +
@@ -94,7 +104,7 @@ public abstract class Commands {
         private Save() {}
     }
 
-    public static abstract class Load {
+    public static final class Load {
 
         public static final String USAGE = "load <filename>";
         public static final String DESCRIPTION = "" +
@@ -104,7 +114,7 @@ public abstract class Commands {
         private Load() {}
     }
 
-    public static abstract class Import {
+    public static final class Import {
 
         public static final String ALIAS = "import";
         public static final String USAGE = "import <filename>";
@@ -113,6 +123,36 @@ public abstract class Commands {
                 "  - filename - name of file to import";
 
         private Import() {}
+    }
+
+    public static final class Su {
+
+        public static final String USAGE = "su [username]";
+        public static final String DESCRIPTION = "" +
+                "Set current user to provided or default\n" +
+                "  - username - name of user to set";
+
+        private Su() {}
+    }
+
+    public static final class Passwd {
+
+        public static final String USAGE = "passwd [username]";
+        public static final String DESCRIPTION = "" +
+                "Change password of current or provided user\n" +
+                "  - username - not required name of user for change password";
+
+        private Passwd() {}
+    }
+
+    public static final class Register {
+
+        public static final String USAGE = "register <username>";
+        public static final String DESCRIPTION = "" +
+                "Register user with provided name\n" +
+                "  - username - name for new user";
+
+        private Register() {}
     }
 
     private static final String ELEMENT_DESCRIPTION = "" +

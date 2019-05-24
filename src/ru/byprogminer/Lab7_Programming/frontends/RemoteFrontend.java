@@ -8,6 +8,7 @@ import ru.byprogminer.Lab7_Programming.Frontend;
 import ru.byprogminer.Lab7_Programming.RunMutex;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
+import ru.byprogminer.Lab7_Programming.controllers.UsersController;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import java.io.IOException;
@@ -67,19 +68,25 @@ public class RemoteFrontend implements Frontend {
                         if (request instanceof Request.Add) {
                             final Request.Add addRequest = (Request.Add) request;
 
-                            view = collectionController.add(addRequest.element);
+                            view = collectionController.add(addRequest.element, addRequest.credentials);
                         } else if (request instanceof Request.Remove) {
                             final Request.Remove removeRequest = (Request.Remove) request;
 
-                            view = collectionController.remove(removeRequest.element);
+                            view = collectionController.remove(removeRequest.element, removeRequest.credentials);
                         } else if (request instanceof Request.RemoveLower) {
                             final Request.RemoveLower removeLowerRequest = (Request.RemoveLower) request;
 
-                            view = collectionController.removeLower(removeLowerRequest.element);
+                            view = collectionController.removeLower(
+                                    removeLowerRequest.element,
+                                    removeLowerRequest.credentials
+                            );
                         } else if (request instanceof Request.RemoveGreater) {
                             final Request.RemoveGreater removeGreaterRequest = (Request.RemoveGreater) request;
 
-                            view = collectionController.removeGreater(removeGreaterRequest.element);
+                            view = collectionController.removeGreater(
+                                    removeGreaterRequest.element,
+                                    removeGreaterRequest.credentials
+                            );
                         } else if (request instanceof Request.Info) {
                             view = collectionController.info();
                         } else if (request instanceof Request.ShowAll) {
@@ -91,15 +98,25 @@ public class RemoteFrontend implements Frontend {
                         } else if (request instanceof Request.Save) {
                             final Request.Save saveRequest = (Request.Save) request;
 
-                            view = collectionController.save(saveRequest.filename);
+                            view = collectionController.save(saveRequest.filename, saveRequest.credentials);
                         } else if (request instanceof Request.Load) {
                             final Request.Load loadRequest = (Request.Load) request;
 
-                            view = collectionController.load(loadRequest.filename);
+                            view = collectionController.load(loadRequest.filename, loadRequest.credentials);
                         } else if (request instanceof Request.Import) {
                             final Request.Import importRequest = (Request.Import) request;
 
-                            view = collectionController.importObjects(importRequest.content);
+                            view = collectionController.importObjects(importRequest.content, importRequest.credentials);
+                        } else if (request instanceof Request.ChangePassword) {
+                            final Request.ChangePassword changePasswordRequest = (Request.ChangePassword) request;
+
+                            view = usersController.changePassword(changePasswordRequest.username,
+                                    changePasswordRequest.password, changePasswordRequest.credentials);
+                        } else if (request instanceof Request.Register) {
+                            final Request.Register registerRequest = (Request.Register) request;
+
+                            view = usersController.register(registerRequest.username,
+                                    registerRequest.email, registerRequest.credentials);
                         } else {
                             view = null;
                         }
@@ -129,10 +146,16 @@ public class RemoteFrontend implements Frontend {
     private final RunMutex runMutex = new RunMutex();
     private final Map<Thread, UdpSocket<?>> threadSockets = new ConcurrentHashMap<>();
     private final CollectionController collectionController;
+    private final UsersController usersController;
     private final UdpServerSocket<?> serverSocket;
 
-    public RemoteFrontend(UdpServerSocket<?> serverSocket, CollectionController collectionController) {
+    public RemoteFrontend(
+            UdpServerSocket<?> serverSocket,
+            UsersController usersController,
+            CollectionController collectionController
+    ) {
         this.collectionController = collectionController;
+        this.usersController = usersController;
         this.serverSocket = serverSocket;
 
         try {

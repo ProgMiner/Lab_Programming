@@ -5,57 +5,80 @@ import ru.byprogminer.Lab5_Programming.csv.CsvReader;
 import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
 import ru.byprogminer.Lab5_Programming.csv.CsvWriter;
 import ru.byprogminer.Lab5_Programming.csv.CsvWriterWithHeader;
+import ru.byprogminer.Lab7_Programming.Credentials;
 import ru.byprogminer.Lab7_Programming.LivingObjectReader;
 import ru.byprogminer.Lab7_Programming.LivingObjectWriter;
+import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectWriter;
 import ru.byprogminer.Lab7_Programming.models.CollectionModel;
+import ru.byprogminer.Lab7_Programming.models.UsersModel;
 import ru.byprogminer.Lab7_Programming.views.*;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.util.*;
+import java.util.function.Supplier;
 
+import static ru.byprogminer.Lab5_Programming.LabUtils.setOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
 
 public class CollectionController {
 
     private final CollectionModel collectionModel;
+    private final UsersModel usersModel;
 
-    public CollectionController(CollectionModel collectionModel) {
+    public CollectionController(UsersModel usersModel, CollectionModel collectionModel) {
         this.collectionModel = collectionModel;
+        this.usersModel = usersModel;
     }
 
-    public AddView add(LivingObject livingObject) {
-        try {
-            return new AddView(collectionModel.add(livingObject));
-        } catch (Throwable e) {
-            return new AddView(e.getLocalizedMessage());
-        }
+    public View add(LivingObject livingObject, Credentials credentials) {
+        return permissionTemplate(credentials, "collection.add", () -> {
+            try {
+                return new AddView(collectionModel.add(livingObject, credentials.username));
+            } catch (Throwable e) {
+                return new AddView(e.getLocalizedMessage());
+            }
+        });
     }
 
-    public RemoveView remove(LivingObject livingObject) {
-        try {
-            return new RemoveView(collectionModel.remove(livingObject));
-        } catch (Throwable e) {
-            return new RemoveView(e.getLocalizedMessage());
-        }
+    public View remove(LivingObject livingObject, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("collection.remove.all", "collection.remove.own"), () -> {
+            try {
+                if (usersModel.hasPermission(credentials.username, "collection.remove.all")) {
+                    return new RemoveView(collectionModel.remove(livingObject));
+                }
+
+                return new RemoveView(collectionModel.remove(livingObject, credentials.username));
+            } catch (Throwable e) {
+                return new RemoveView(e.getLocalizedMessage());
+            }
+        });
     }
 
-    public RemoveView removeLower(LivingObject livingObject) {
-        try {
-            return new RemoveView(collectionModel.removeLower(livingObject));
-        } catch (Throwable e) {
-            return new RemoveView(e.getLocalizedMessage());
-        }
+    public View removeLower(LivingObject livingObject, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("collection.removeLower.all", "collection.removeLower.own"), () -> {
+            try {
+                if (usersModel.hasPermission(credentials.username, "collection.removeLower.all")) {
+                    return new RemoveView(collectionModel.removeLower(livingObject));
+                }
+
+                return new RemoveView(collectionModel.removeLower(livingObject, credentials.username));
+            } catch (Throwable e) {
+                return new RemoveView(e.getLocalizedMessage());
+            }
+        });
     }
 
-    public RemoveView removeGreater(LivingObject livingObject) {
-        try {
-            return new RemoveView(collectionModel.removeGreater(livingObject));
-        } catch (Throwable e) {
-            return new RemoveView(e.getLocalizedMessage());
-        }
+    public View removeGreater(LivingObject livingObject, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("collection.removeGreater.all", "collection.removeGreater.own"), () -> {
+            try {
+                return new RemoveView(collectionModel.removeGreater(livingObject, credentials.username));
+            } catch (Throwable e) {
+                return new RemoveView(e.getLocalizedMessage());
+            }
+        });
     }
 
     public InfoView info() {
@@ -86,41 +109,85 @@ public class CollectionController {
         }
     }
 
-    public SaveView save(String filename) {
-        try {
-            final LivingObjectWriter<?> writer = new CsvLivingObjectWriter(new CsvWriterWithHeader(
-                    new CsvWriter(new FileWriter(filename))));
+    public View save(String filename, Credentials credentials) {
+        return permissionTemplate(credentials, "collection.save", () -> {
+            try {
+                final LivingObjectWriter<?> writer = new CsvLivingObjectWriter(new CsvWriterWithHeader(
+                        new CsvWriter(new FileWriter(filename))));
 
-            final SortedMap<String, String> metadata = new TreeMap<>(collectionModel.getMetadata());
-            metadata.forEach(throwing().consumer(writer::writeMetadata));
+                final SortedMap<String, String> metadata = new TreeMap<>(collectionModel.getMetadata());
+                metadata.forEach(throwing().consumer(writer::writeMetadata));
 
-            final SortedSet<LivingObject> livingObjects = new TreeSet<>(collectionModel.get());
-            livingObjects.forEach(throwing().consumer(writer::write));
+                final SortedSet<LivingObject> livingObjects = new TreeSet<>(collectionModel.get());
+                livingObjects.forEach(throwing().consumer(writer::write));
 
-            writer.flush();
-            return new SaveView(filename);
-        } catch (Throwable e) {
-            return new SaveView(filename, e.getLocalizedMessage());
-        }
+                writer.flush();
+                return new SaveView(filename);
+            } catch (Throwable e) {
+                return new SaveView(filename, e.getLocalizedMessage());
+            }
+        });
     }
 
-    public LoadView load(String filename) {
-        try {
-            final LivingObjectReader reader = new CsvLivingObjectReader(new CsvReaderWithHeader(
-                    new CsvReader(new Scanner(new File(filename)))));
+    public View load(String filename, Credentials credentials) {
+        return permissionTemplate(credentials, "collection.load", () -> {
+            try {
+                final LivingObjectReader reader = new CsvLivingObjectReader(new CsvReaderWithHeader(
+                        new CsvReader(new Scanner(new File(filename)))));
 
-            collectionModel.load(reader.getObjects(), reader.getMetadata());
-            return new LoadView(filename);
-        } catch (Throwable e) {
-            return new LoadView(filename, e.getLocalizedMessage());
-        }
+                // TODO add to living object reader users
+                final Map<LivingObject, String> livingObjects = new HashMap<>();
+                for (LivingObject livingObject : reader.getObjects()) {
+                    livingObjects.put(livingObject, null);
+                }
+
+                collectionModel.load(livingObjects, reader.getMetadata());
+                return new LoadView(filename);
+            } catch (Throwable e) {
+                return new LoadView(filename, e.getLocalizedMessage());
+            }
+        });
     }
 
-    public ImportView importObjects(Collection<LivingObject> livingObjects) {
-        try {
-            return new ImportView(collectionModel.addAll(livingObjects));
-        } catch (Throwable e) {
-            return new ImportView(e.getLocalizedMessage());
+    public View importObjects(Collection<LivingObject> livingObjects, Credentials credentials) {
+        return permissionTemplate(credentials, "collection.importObjects", () -> {
+            try {
+                return new ImportView(collectionModel.addAll(livingObjects, credentials.username));
+            } catch (Throwable e) {
+                return new ImportView(e.getLocalizedMessage());
+            }
+        });
+    }
+
+    private View authorizedTemplate(Credentials credentials, Supplier<View> code) {
+        if (credentials == null) {
+            return new NotLoggedView();
         }
+
+        if (!usersModel.check(credentials)) {
+            return new WrongCredentialsView(credentials);
+        }
+
+        return code.get();
+    }
+
+    private View permissionTemplate(Credentials credentials, String permission, Supplier<View> code) {
+        return authorizedTemplate(credentials, () -> {
+            if (!usersModel.hasPermission(credentials.username, permission)) {
+                return new NotPermittedView();
+            }
+
+            return code.get();
+        });
+    }
+
+    private View permissionTemplate(Credentials credentials, Set<String> permissions, Supplier<View> code) {
+        return authorizedTemplate(credentials, () -> {
+            if (!usersModel.hasPermission(credentials.username, permissions)) {
+                return new NotPermittedView();
+            }
+
+            return code.get();
+        });
     }
 }

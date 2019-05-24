@@ -192,6 +192,25 @@ public class Console {
         printf(translator.get("message.warning"), msg);
     }
 
+    public String getLine() {
+        if (!scanner.hasNextLine()) {
+            return null;
+        }
+
+        return scanner.nextLine();
+    }
+
+    public String requestInput(String prompt) {
+        print(prompt);
+
+        final String line = getLine();
+        if (line == null) {
+            throw new IllegalArgumentException("input cancelled");
+        }
+
+        return line;
+    }
+
     protected void checkSpelling(final String commandName, int commandArgsCount) {
         if (maxMistakeCount <= 0) {
              return;

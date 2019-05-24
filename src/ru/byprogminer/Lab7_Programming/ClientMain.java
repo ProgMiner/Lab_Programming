@@ -24,8 +24,8 @@ import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,8 +61,10 @@ public class ClientMain {
 
     private static final Renderer renderer;
     private static final Console console;
-    private static SocketAddress address;
-    private static UdpSocket<?> socket;
+
+    private static final CurrentUser currentUser = new CurrentUser();
+    private static SocketAddress address = null;
+    private static UdpSocket<?> socket = null;
 
     static {
         final CallableCommandRunner commandRunner = new CallableCommandRunner();
@@ -90,6 +92,11 @@ public class ClientMain {
                 .callable(arrayOf(String.class), sendElement(Request.Remove::new)).save();
 
         commandRunner
+                .command("rm")
+                .usage(Commands.Rm.USAGE).description(Commands.Rm.DESCRIPTION)
+                .callable(arrayOf(String.class), sendElement(Request.Remove::new)).save();
+
+        commandRunner
                 .command(Commands.RemoveLower.ALIAS)
                 .usage(Commands.RemoveLower.USAGE).description(Commands.RemoveLower.DESCRIPTION)
                 .callable(arrayOf(String.class), sendElement(Request.RemoveLower::new)).save();
@@ -107,7 +114,7 @@ public class ClientMain {
                 .command("show")
                 .usage(Commands.Show.USAGE).description(Commands.Show.DESCRIPTION)
                 .callable(arrayOf(), sendSimple(Request.ShowAll::new))
-                .callable(arrayOf(String.class), sendString(countString -> {
+                .callable(arrayOf(String.class), sendString((countString, credentials) -> {
                     long count;
 
                     try {
@@ -116,7 +123,7 @@ public class ClientMain {
                         throw new IllegalArgumentException("count has bad format", e);
                     }
 
-                    return new Request.Show(count);
+                    return new Request.Show(count, credentials);
                 })).save();
 
         commandRunner
@@ -136,7 +143,7 @@ public class ClientMain {
         commandRunner
                 .command(Commands.Import.ALIAS)
                 .usage(Commands.Import.USAGE).description(Commands.Import.DESCRIPTION)
-                .callable(arrayOf(String.class), sendString(filename -> {
+                .callable(arrayOf(String.class), sendString((filename, credentials) -> {
                     final Scanner scanner;
 
                     try {
@@ -146,8 +153,46 @@ public class ClientMain {
                     }
 
                     return new Request.Import(new CsvLivingObjectReader(new CsvReaderWithHeader(
-                            new CsvReader(scanner))).getObjects());
+                            new CsvReader(scanner))).getObjects(), credentials);
                 })).save();
+
+        commandRunner
+                .command("su")
+                .usage(Commands.Su.USAGE).description(Commands.Su.DESCRIPTION)
+                .callable(arrayOf(), args -> {
+                    final Credentials credentials = currentUser.reset();
+
+                    console.printf("Current user set to %s\n", credentials == null ? "anonymous" : credentials.username);
+                }).callable(arrayOf(String.class), args -> {
+                    final String username = (String) args[0];
+
+                    console.printf("Enter password of user %s: ", username);
+                    final String password = console.getLine();
+
+                    if (password == null) {
+                        console.printWarning("Input cancelled");
+                        return;
+                    }
+
+                    currentUser.set(new Credentials(username, password));
+                    console.printf("Current user set to %s\n", username);
+                }).save();
+
+        commandRunner
+                .command("passwd")
+                .usage(Commands.Passwd.USAGE).description(Commands.Passwd.DESCRIPTION)
+                .callable(arrayOf(), sendSimple(credentials -> new Request.ChangePassword(console
+                        .requestInput("Enter new password: "), credentials)))
+                .callable(arrayOf(String.class), sendString((username, credentials) ->
+                        new Request.ChangePassword(username, console.requestInput(String
+                                .format("Enter new password for user %s: ", username)), credentials))).save();
+
+        commandRunner
+                .command("register")
+                .usage(Commands.Register.USAGE).description(Commands.Register.DESCRIPTION)
+                .callable(arrayOf(String.class), sendString((username, credentials) ->
+                        new Request.Register(username, console.requestInput(String
+                                .format("Enter E-Mail for user %s: ", username)), credentials))).save();
     }
 
     public static void main(String[] args) {
@@ -304,15 +349,16 @@ public class ClientMain {
         }
     }
 
-    private static Invokable sendSimple(Supplier<Request> packetSupplier) {
-        return send(args -> packetSupplier.get());
+    private static Invokable sendSimple(Function<Credentials, Request> packetSupplier) {
+        return send(args -> packetSupplier.apply(currentUser.get()));
     }
 
-    private static Invokable sendString(Function<String, Request> packetFunction) {
-        return send(args -> packetFunction.apply((String) args[0]));
+    private static Invokable sendString(BiFunction<String, Credentials, Request> packetFunction) {
+        return send(args -> packetFunction.apply((String) args[0], currentUser.get()));
     }
 
-    private static Invokable sendElement(Function<LivingObject, Request> packetFunction) {
-        return sendString(elementJson -> packetFunction.apply(jsonToLivingObject(elementJson)));
+    private static Invokable sendElement(BiFunction<LivingObject, Credentials, Request> packetFunction) {
+        return sendString((elementJson, credentials) ->
+                packetFunction.apply(jsonToLivingObject(elementJson), credentials));
     }
 }

@@ -6,6 +6,8 @@ import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab3_Programming.Object;
 import ru.byprogminer.Lab5_Programming.throwing.Throwing;
 import ru.byprogminer.Lab5_Programming.throwing.ThrowingFunction;
+import ru.byprogminer.Lab5_Programming.throwing.ThrowingRunnable;
+import ru.byprogminer.Lab5_Programming.throwing.ThrowingSupplier;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import java.lang.reflect.Field;
@@ -30,6 +32,9 @@ public final class LabUtils {
 
         T construct(String name);
     }
+
+    public static final String PASSWORD_ALPHABET = "" +
+            "0123456789abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()-+[]{}\\|,.<>/?";
 
     private static Logger log = Loggers.getClassLogger(LabUtils.class);
 
@@ -154,6 +159,22 @@ public final class LabUtils {
     @SafeVarargs
     public static <T> T[] arrayOf(T... elements) {
         return elements;
+    }
+
+    @SafeVarargs
+    public static <T> Set<T> setOf(T... elements) {
+        return new HashSet<>(Arrays.asList(elements));
+    }
+
+    public static <T, E extends Exception> ThrowingSupplier<T, E> supplier(ThrowingRunnable<E> code, T value) {
+        return () -> {
+            code.run();
+            return value;
+        };
+    }
+
+    public static <T, E extends Exception> ThrowingSupplier<T, E> supplier(ThrowingRunnable<E> code) {
+        return supplier(code, null);
     }
 
     @SuppressWarnings("unchecked")

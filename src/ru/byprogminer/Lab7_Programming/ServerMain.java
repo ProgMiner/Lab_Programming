@@ -2,11 +2,14 @@ package ru.byprogminer.Lab7_Programming;
 
 import ru.byprogminer.Lab6_Programming.udp.UdpServerSocket;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
+import ru.byprogminer.Lab7_Programming.controllers.UsersController;
 import ru.byprogminer.Lab7_Programming.frontends.LocalFrontend;
 import ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
+import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
+import ru.byprogminer.Lab7_Programming.models.UsersModel;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -31,7 +34,8 @@ public class ServerMain {
         private static final int BAD_PORT_PROVIDED = 2;
         private static final int CANNOT_REQUEST_DATA_TO_CONNECT_TO_DB = 3;
         private static final int CANNOT_CONNECT_TO_DB = 4;
-        private static final int COLLECTION_MODEL_INIT_ERROR = 5;
+        private static final int USERS_MODEL_INIT_ERROR = 5;
+        private static final int COLLECTION_MODEL_INIT_ERROR = 6;
     }
 
     public static final int PART_SIZE = 1536;
@@ -118,6 +122,15 @@ public class ServerMain {
             return Status.CANNOT_CONNECT_TO_DB;
         }
 
+        final UsersModel usersModel;
+        try {
+            usersModel = new DatabaseUsersModel(dbConnection);
+        } catch (SQLException e) {
+            log.log(Level.SEVERE, "An error occurred while users model initializing", e);
+            System.err.println("Unable to setup database connection. Check logs for details or try again.");
+            return Status.USERS_MODEL_INIT_ERROR;
+        }
+
         final CollectionModel collectionModel;
         try {
             collectionModel = new DatabaseCollectionModel(dbConnection);
@@ -127,9 +140,10 @@ public class ServerMain {
             return Status.COLLECTION_MODEL_INIT_ERROR;
         }
 
-        final CollectionController collectionController = new CollectionController(collectionModel);
+        final UsersController usersController = new UsersController(usersModel);
+        final CollectionController collectionController = new CollectionController(usersModel, collectionModel);
 
-        final LocalFrontend localFrontend = new LocalFrontend(collectionController);
+        final LocalFrontend localFrontend = new LocalFrontend(usersController, collectionController);
         final RemoteFrontend remoteFrontend;
 
         {
@@ -146,7 +160,7 @@ public class ServerMain {
                 }
 
                 final UdpServerSocket<?> serverSocket = UdpServerSocket.by(channel, PART_SIZE);
-                tmpRemoteFrontend = new RemoteFrontend(serverSocket, collectionController);
+                tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
 
                 final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);
                 remoteFrontendThread.setName("Remote frontend");
