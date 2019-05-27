@@ -19,5 +19,4 @@
 
 ## Bugs
 
-  - Bad behaviour when two clients working parallel
   - Bad multi-users behaviour of commands

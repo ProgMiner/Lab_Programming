@@ -1,11 +1,14 @@
 package ru.byprogminer.Lab6_Programming.udp;
 
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
+
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.logging.Logger;
 
 import static ru.byprogminer.Lab6_Programming.udp.UdpSocket.HEADER_SIZE;
 
@@ -16,6 +19,8 @@ public abstract class UdpServerSocket<D> {
 
     private final Queue<SocketAddress> clients = new LinkedList<>();
 
+    private final Logger log = Loggers.getObjectLogger(this);
+
     public UdpServerSocket(D device, int packetSize) {
         this.packetSize = packetSize;
         this.device = device;
@@ -25,14 +30,17 @@ public abstract class UdpServerSocket<D> {
         return new ChannelUdpServerSocket<>(device, packetSize);
     }
 
-    public final UdpSocket<D> accept() throws IOException {
+    public final UdpSocket<?> accept() throws IOException {
         synchronized (clients) {
             while (clients.isEmpty()) {
                 receivePacket();
+                Thread.yield();
             }
 
             final SocketAddress address = clients.remove();
-            final UdpSocket<D> socket = makeSocket(device, packetSize);
+            log.info("accepted socket from %s" + address);
+
+            final UdpSocket<?> socket = makeSocket(packetSize);
             socket.accept(address);
             return socket;
         }
@@ -59,5 +67,5 @@ public abstract class UdpServerSocket<D> {
     }
 
     protected abstract SocketAddress receiveDatagram(ByteBuffer buffer) throws IOException;
-    protected abstract UdpSocket<D> makeSocket(D device, int packetSize);
+    protected abstract UdpSocket<?> makeSocket(int packetSize) throws IOException;
 }

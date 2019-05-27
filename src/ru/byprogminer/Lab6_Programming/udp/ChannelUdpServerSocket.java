@@ -23,7 +23,7 @@ public class ChannelUdpServerSocket<D extends DatagramChannel> extends UdpServer
     }
 
     @Override
-    protected UdpSocket<D> makeSocket(D device, int packetSize) {
-        return new ChannelUdpSocket<>(device, packetSize);
+    protected UdpSocket<DatagramChannel> makeSocket(int packetSize) throws IOException {
+        return new ChannelUdpSocket<>(DatagramChannel.open(), packetSize);
     }
 }
