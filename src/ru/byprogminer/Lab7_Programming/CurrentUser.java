@@ -12,7 +12,7 @@ public class CurrentUser {
         }
 
         if (!credentialsStack.empty()) {
-            return credentialsStack.pop();
+            return credentialsStack.peek();
         }
 
         return null;
