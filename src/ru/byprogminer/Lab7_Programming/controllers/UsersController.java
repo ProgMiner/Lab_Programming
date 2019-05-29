@@ -42,14 +42,15 @@ public class UsersController {
 
     public View changePassword(String password, Credentials credentials) {
         final Set<String> permissions = setOf("users.changePassword.own");
+
         if (credentials != null) {
             permissions.add("users.changePassword.user." + credentials);
         }
 
         return permissionTemplate(credentials, permissions, () -> {
             try {
-                usersModel.setPassword(Objects.requireNonNull(credentials).username, password);
-                return new ChangePasswordView();
+                return new ChangePasswordView(usersModel.setPassword(Objects.
+                        requireNonNull(credentials).username, password));
             } catch (Throwable e) {
                 return new ChangePasswordView(e.getLocalizedMessage());
             }
@@ -64,8 +65,7 @@ public class UsersController {
         return permissionTemplate(credentials, setOf("users.changePassword.all",
                 "users.changePassword.user." + username), () -> {
             try {
-                usersModel.setPassword(username, password);
-                return new ChangePasswordView();
+                return new ChangePasswordView(usersModel.setPassword(username, password));
             } catch (Throwable e) {
                 return new ChangePasswordView(e.getLocalizedMessage());
             }

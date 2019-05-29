@@ -1,11 +1,9 @@
 package ru.byprogminer.Lab7_Programming.views;
 
-import ru.byprogminer.Lab7_Programming.View;
+public class ChangePasswordView extends OkView {
 
-public class ChangePasswordView extends View {
-
-    public ChangePasswordView() {
-        this(null);
+    public ChangePasswordView(boolean ok) {
+        super(ok);
     }
 
     public ChangePasswordView(String error) {

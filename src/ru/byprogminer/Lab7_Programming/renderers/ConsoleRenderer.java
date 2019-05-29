@@ -121,11 +121,16 @@ public class ConsoleRenderer implements Renderer {
                 console.printf("Saved to %s.\n", saveView.filename);
                 return;
             }
+        }
 
-            if (view instanceof ChangePasswordView) {
+        if (view instanceof ChangePasswordView) {
+            final ChangePasswordView changePasswordView = (ChangePasswordView) view;
+
+            if (changePasswordView.ok) {
                 console.println("Password changed successfully.");
-                return;
             }
+
+            return;
         }
 
         if (view instanceof RegisterView) {
