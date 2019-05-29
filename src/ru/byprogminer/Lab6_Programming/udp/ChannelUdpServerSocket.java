@@ -7,8 +7,8 @@ import java.nio.channels.DatagramChannel;
 
 public class ChannelUdpServerSocket<D extends DatagramChannel> extends UdpServerSocket<D> {
 
-    public ChannelUdpServerSocket(D device, int packetSize) {
-        super(device, packetSize);
+    public ChannelUdpServerSocket(D device, int contentSize) {
+        super(device, contentSize);
     }
 
     @Override
@@ -23,7 +23,7 @@ public class ChannelUdpServerSocket<D extends DatagramChannel> extends UdpServer
     }
 
     @Override
-    protected UdpSocket<DatagramChannel> makeSocket(int packetSize) throws IOException {
-        return new ChannelUdpSocket<>(DatagramChannel.open(), packetSize);
+    protected UdpSocket<DatagramChannel> makeSocket(int contentSize) throws IOException {
+        return new ChannelUdpSocket<>(DatagramChannel.open(), contentSize);
     }
 }

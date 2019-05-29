@@ -8,6 +8,7 @@ import ru.byprogminer.Lab5_Programming.csv.CsvReader;
 import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
 import ru.byprogminer.Lab6_Programming.Packet.Request;
 import ru.byprogminer.Lab6_Programming.Packet.Response;
+import ru.byprogminer.Lab6_Programming.udp.PacketUtils;
 import ru.byprogminer.Lab6_Programming.udp.SocketUdpSocket;
 import ru.byprogminer.Lab6_Programming.udp.UdpSocket;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
@@ -31,7 +32,6 @@ import java.util.logging.Logger;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
-import static ru.byprogminer.Lab7_Programming.ServerMain.PART_SIZE;
 import static ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend.CLIENT_TIMEOUT;
 import static ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend.SO_TIMEOUT;
 
@@ -287,7 +287,7 @@ public class ClientMain {
         final DatagramSocket datagramSocket = new DatagramSocket();
         datagramSocket.setSoTimeout(SO_TIMEOUT);
 
-        socket = new SocketUdpSocket<>(datagramSocket, PART_SIZE);
+        socket = new SocketUdpSocket<>(datagramSocket, PacketUtils.OPTIMAL_PACKET_SIZE);
 
         do {
             try {

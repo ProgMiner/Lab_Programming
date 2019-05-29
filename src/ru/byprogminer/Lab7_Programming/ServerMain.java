@@ -1,5 +1,7 @@
 package ru.byprogminer.Lab7_Programming;
 
+import ru.byprogminer.Lab6_Programming.udp.ChannelUdpServerSocket;
+import ru.byprogminer.Lab6_Programming.udp.PacketUtils;
 import ru.byprogminer.Lab6_Programming.udp.UdpServerSocket;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.controllers.UsersController;
@@ -37,8 +39,6 @@ public class ServerMain {
         private static final int USERS_MODEL_INIT_ERROR = 5;
         private static final int COLLECTION_MODEL_INIT_ERROR = 6;
     }
-
-    public static final int PART_SIZE = 1536;
 
     private static final String USAGE = "" +
             "Usage: java -jar lab7_server.jar [port]\n" +
@@ -159,7 +159,7 @@ public class ServerMain {
                     channel.bind(new InetSocketAddress(port));
                 }
 
-                final UdpServerSocket<?> serverSocket = UdpServerSocket.by(channel, PART_SIZE);
+                final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
                 tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
 
                 final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);

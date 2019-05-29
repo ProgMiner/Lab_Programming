@@ -13,8 +13,8 @@ public class SocketUdpSocket<D extends DatagramSocket> extends UdpSocket<D> {
 
     private final Logger log = Loggers.getObjectLogger(this);
 
-    public SocketUdpSocket(D device, int packetSize) {
-        super(device, packetSize);
+    public SocketUdpSocket(D device, int contentSize) {
+        super(device, contentSize);
     }
 
     @Override

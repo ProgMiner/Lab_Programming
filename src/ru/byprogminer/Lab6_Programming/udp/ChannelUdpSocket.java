@@ -12,8 +12,8 @@ public class ChannelUdpSocket<D extends DatagramChannel> extends UdpSocket<D> {
 
     private final Logger log = Loggers.getObjectLogger(this);
 
-    public ChannelUdpSocket(D device, int packetSize) {
-        super(device, packetSize);
+    public ChannelUdpSocket(D device, int contentSize) {
+        super(device, contentSize);
     }
 
     @Override

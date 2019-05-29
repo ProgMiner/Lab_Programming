@@ -3,9 +3,6 @@ package ru.byprogminer.Lab6_Programming.udp;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import java.io.*;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
@@ -17,21 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.CRC32;
 
-/**
- * Packets structure
- *
- * +-----------+--------+----------+-------+---------+
- * | Signature | Action | Previous | Count | Content |
- * +-----------+--------+----------+-------+---------+
- *
- *   - Signature -  int   - Signature
- *   - Action    -  byte  - Action ({@see Action})
- *   - Previous  -  long  - Hash of the previous sent packet
- *   - Count     -  byte  - Count of packets in this object (decreased by one)
- *   - Content   - byte[] - Content of this packet
- */
 public abstract class UdpSocket<D> implements Closeable {
 
     /**
@@ -100,20 +83,17 @@ public abstract class UdpSocket<D> implements Closeable {
          * Receives packet and processes it
          */
         private void receivePacket() throws IOException, InterruptedException, ClassNotFoundException {
-            final ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + packetSize.intValue());
+            final ByteBuffer buffer = ByteBuffer.allocate(packetUtils.packetSize);
             final SocketAddress address = receiveDatagram(buffer);
             buffer.flip();
 
-            final ByteBuffer packet = buffer.asReadOnlyBuffer();
-            if (buffer.remaining() < HEADER_SIZE || buffer.getInt() != SIGNATURE) {
+            final ParsedPacket packet = packetUtils.parsePacket(buffer);
+            if (packet == null) {
                 return;
             }
 
-            log.info("received packet: " + packetToString(packet));
-            packet.rewind();
-
-            final Action action = Action.by(buffer.get());
-            if (action == Action.CONNECT) {
+            log.info("received packet: " + packet);
+            if (packet.action == Action.CONNECT) {
                 synchronized (UdpSocket.this) {
                     if (remote == null) {
                         remote = address;
@@ -126,54 +106,40 @@ public abstract class UdpSocket<D> implements Closeable {
             preprocessPacket(packet);
         }
 
-        private void preprocessPacket(ByteBuffer packet) throws IOException, InterruptedException, ClassNotFoundException {
-            packet.getInt(); // Skip Signature
-
-            final Action action = Action.by(packet.get());
-            final long previous = packet.getLong();
-            packet.rewind();
-
-            switch (action) {
+        private void preprocessPacket(ParsedPacket packet) throws IOException, InterruptedException, ClassNotFoundException {
+            switch (packet.action) {
                 case CONNECT:
                     return;
 
                 case CONFIRM:
-                    expectedConfirmations.remove(previous);
-
+                    expectedConfirmations.remove(packet.previous);
                     return;
-            }
 
-            final long hash = crc32(packet);
-            packet.rewind();
-
-            switch (action) {
                 case TRANSPORT:
-                    sendDatagram(makePacket(Action.CONFIRM, hash, 0, ByteBuffer.allocate(0)));
+                    sendDatagram(packetUtils.writePacket(new Packet(Action.CONFIRM, packet.hash)));
 
                 case FINISH:
-                    if (rotatePrevious(previous, hash)) {
+                    if (rotatePrevious(packet)) {
                         processPacket(packet);
                     }
             }
         }
 
-        private boolean rotatePrevious(long previous, long current) {
+        private boolean rotatePrevious(ParsedPacket packet) {
             synchronized (this.previous) {
-                if (this.previous.get() != previous) {
+                if (this.previous.get() != packet.previous) {
                     return false;
                 }
 
-                log.info(String.format("rotate previous: %d -> %d", previous, current));
-                this.previous.set(current);
+                log.info(String.format("rotate previous: %d -> %d", packet.previous, packet.hash));
+                this.previous.set(packet.hash);
             }
 
             return true;
         }
 
-        private void processPacket(ByteBuffer packet) throws IOException, InterruptedException, ClassNotFoundException {
-            packet.getInt(); // Skip Signature
-
-            switch (Action.by(packet.get())) {
+        private void processPacket(Packet packet) throws IOException, InterruptedException, ClassNotFoundException {
+            switch (packet.action) {
                 case TRANSPORT:
                     break;
 
@@ -184,21 +150,19 @@ public abstract class UdpSocket<D> implements Closeable {
                     return;
             }
 
-            packet.getLong(); // Skip Previous
-            final int count = packet.get() + 1;
-
             final ByteBuffer objectBuffer;
-            if (count > 1) {
+            if (packet.count > 0) {
                 final ByteBuffer receivingObject = this.receivingObject;
-                this.receivingObject = objectBuffer = (receivingObject == null ? ByteBuffer.allocate(packetSize.intValue() * count) : receivingObject);
+                objectBuffer = this.receivingObject = (receivingObject == null ?
+                        ByteBuffer.allocate(packetUtils.contentSize * (packet.count + 1)) : receivingObject);
 
-                objectBuffer.put(packet);
+                objectBuffer.put(packet.getContent());
             } else {
-                objectBuffer = packet.slice();
-                objectBuffer.position(objectBuffer.remaining()); // It's OK
+                objectBuffer = ByteBuffer.allocate(packetUtils.contentSize);
+                objectBuffer.put(packet.getContent());
             }
 
-            if (objectBuffer.remaining() < packetSize.intValue()) {
+            if (objectBuffer.remaining() < packetUtils.contentSize) {
                 objectBuffer.flip();
 
                 receivingObject = null;
@@ -213,42 +177,7 @@ public abstract class UdpSocket<D> implements Closeable {
                 stream.close();
             }
         }
-
-        private String packetToString(ByteBuffer packet) {
-            packet.getInt(); // Skip Signature
-
-            final Action action = Action.by(packet.get());
-            final long previous = packet.getLong();
-            final byte count = packet.get();
-            final int contentSize = packet.remaining();
-
-            final StringBuilder packetStart = new StringBuilder();
-            for (int i = 0; i < 3 && packet.hasRemaining(); ++i) {
-                if (i != 0) {
-                    packetStart.append(", ");
-                }
-
-                packetStart.append(String.format("0x%02X", packet.get()));
-            }
-
-            if (packet.hasRemaining()) {
-                packetStart.append("...");
-            }
-
-            return String.format("%2$d -> %1$s/%3$d new byte[%4$d] {%5$s}",
-                    action, previous, count, contentSize, packetStart);
-        }
     }
-
-    /**
-     * Signature of packets
-     */
-    public static final int SIGNATURE = 0x55_44_50_53;
-
-    /**
-     * Size of packet header in bytes
-     */
-    public static final int HEADER_SIZE = 2 * Byte.BYTES + Integer.BYTES + Long.BYTES;
 
     // Logging
     private final Logger log = Loggers.getObjectLogger(this);
@@ -256,7 +185,7 @@ public abstract class UdpSocket<D> implements Closeable {
     // General
     protected volatile SocketAddress remote = null;
     private volatile boolean closed = false;
-    protected final BigDecimal packetSize;
+    private final PacketUtils packetUtils;
     protected final D device;
 
     // Sending
@@ -272,10 +201,10 @@ public abstract class UdpSocket<D> implements Closeable {
      * Initializes socket and starts receiver thread
      *
      * @param device device for working with datagrams
-     * @param packetSize size of content field of packets
+     * @param contentSize size of content field of packets
      */
-    public UdpSocket(D device, int packetSize) {
-        this.packetSize = BigDecimal.valueOf(packetSize);
+    public UdpSocket(D device, int contentSize) {
+        this.packetUtils = new PacketUtils(contentSize);
         this.device = device;
 
         log.info("starting receiver");
@@ -295,7 +224,7 @@ public abstract class UdpSocket<D> implements Closeable {
             assertNotConnected();
 
             remote = to;
-            sendDatagram(makePacket(Action.CONNECT, 0, ByteBuffer.allocate(0)));
+            sendDatagram(packetUtils.writePacket(new Packet(Action.CONNECT)));
             remote = null;
         }
 
@@ -324,7 +253,7 @@ public abstract class UdpSocket<D> implements Closeable {
         log.info("connect to client");
 
         remote = from;
-        sendDatagram(makePacket(Action.CONNECT, 0, ByteBuffer.allocate(0)));
+        sendDatagram(packetUtils.writePacket(new Packet(Action.CONNECT)));
     }
 
     /**
@@ -350,8 +279,7 @@ public abstract class UdpSocket<D> implements Closeable {
 
             log.info("send object " + object);
             final ByteBuffer objectBuffer = ByteBuffer.wrap(byteArrayStream.toByteArray());
-            final int count = BigDecimal.valueOf(objectBuffer.remaining()).divide(packetSize, 0, RoundingMode.UP)
-                    .toBigInteger().subtract(BigInteger.ONE).and(BigInteger.valueOf(0xFF)).intValue();
+            final int count = packetUtils.getPacketsCount(objectBuffer.remaining());
 
             int i;
             final long start = System.currentTimeMillis();
@@ -360,8 +288,8 @@ public abstract class UdpSocket<D> implements Closeable {
                 final Long hash;
 
                 synchronized (previous) {
-                    packet = makePacket(Action.TRANSPORT, count, objectBuffer);
-                    hash = crc32(packet);
+                    packet = packetUtils.writePacket(packetUtils.makePacket(Action.TRANSPORT, previous.get(), count, objectBuffer));
+                    hash = PacketUtils.crc32(packet);
 
                     log.info(String.format("rotate previous: %d -> %d", previous.get(), hash));
                     previous.set(hash);
@@ -373,7 +301,8 @@ public abstract class UdpSocket<D> implements Closeable {
                 packet.rewind();
                 sendDatagram(packet);
                 Thread.sleep(RESEND_DELAY);
-                while (!closed && receiver.expectedConfirmations.contains(hash) && System.currentTimeMillis() - start < timeout) {
+                while (!closed && receiver.expectedConfirmations.contains(hash) &&
+                        System.currentTimeMillis() - start < timeout) {
                     try {
                         log.info(String.format("resend %d/%d packet", i, count));
 
@@ -446,39 +375,13 @@ public abstract class UdpSocket<D> implements Closeable {
         log.info("close socket");
 
         try {
-            sendDatagram(makePacket(Action.FINISH, 0, ByteBuffer.allocate(0)));
+            sendDatagram(packetUtils.writePacket(new Packet(Action.FINISH, previous.get())));
         } catch (IOException e) {
             log.log(Level.WARNING, "unable to send FINISH packet", e);
         }
 
         closed = true;
         receiver.thread.interrupt();
-    }
-
-    private ByteBuffer makePacket(Action action, int count, ByteBuffer content) {
-        return makePacket(action, previous.get(), count, content);
-    }
-
-    private ByteBuffer makePacket(Action action, long previous, int count, ByteBuffer content) {
-        final ByteBuffer packet = ByteBuffer.allocate(HEADER_SIZE + Math.min(packetSize.intValue(), content.remaining()));
-
-        packet.putInt(SIGNATURE);
-        packet.put(action.getCode());
-        packet.putLong(previous);
-        packet.put((byte) (count & 0xFF));
-        while (packet.hasRemaining() && content.hasRemaining()) {
-            packet.put(content.get());
-        }
-
-        packet.flip();
-        return packet;
-    }
-
-    private static long crc32(ByteBuffer buffer) {
-        final CRC32 crc32 = new CRC32();
-        crc32.update(buffer);
-
-        return crc32.getValue();
     }
 
     private void assertNotConnected() {
