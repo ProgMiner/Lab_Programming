@@ -13,6 +13,7 @@ import java.util.Map;
  *
  *   - addAll(Collection&lt;LivingObject&gt;) - add elements as owned by nobody
  *   - addAll(Map&lt;LivingObject, String&gt;) - add elements as owned by associated users
+ *   - addAll(Collection&lt;LivingObject&gt;, String) - add elements as owned by specified user
  *
  *   - remove(LivingObject) - remove element
  *   - remove(LivingObject, String) - remove element if it is owned by provided user
@@ -33,7 +34,8 @@ import java.util.Map;
  *   - load(Map&lt;LivingObject, String&gt;, Map&lt;String, String&gt;) - load collection elements and metadata
  *                                                                        instead of current
  *
- * Nobody can remove elements owned by nobody.
+ * Each element can has only one or zero owners.
+ * If somebody try to add an element that is already has in collection, nothing does.
  */
 public interface CollectionModel {
 
@@ -41,7 +43,12 @@ public interface CollectionModel {
         return add(livingObject, null);
     }
 
-    int add(LivingObject livingObject, String username);
+    default int add(LivingObject livingObject, String username) {
+        final Map<LivingObject, String> livingObjects = new HashMap<>();
+        livingObjects.put(livingObject, username);
+
+        return addAll(livingObjects);
+    }
 
     default int addAll(Collection<LivingObject> livingObjects) {
         return addAll(livingObjects, null);

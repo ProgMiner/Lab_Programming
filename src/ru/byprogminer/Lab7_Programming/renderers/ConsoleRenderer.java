@@ -137,7 +137,7 @@ public class ConsoleRenderer implements Renderer {
                 console.printf("User %s was registered successfully.\n", registerView.username);
 
                 if (registerView.password == null) {
-                    console.printf("On address %s has sent mail with password.\n", registerView.email);
+                    console.printf("On address %s has sent a mail with password.\n", registerView.email);
                 } else {
                     console.printWarning(String.format("An error occurred while mail sending. Password of user %s: %s",
                             registerView.username, registerView.password));

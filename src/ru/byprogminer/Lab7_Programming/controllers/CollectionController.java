@@ -74,6 +74,10 @@ public class CollectionController {
     public View removeGreater(LivingObject livingObject, Credentials credentials) {
         return permissionTemplate(credentials, setOf("collection.removeGreater.all", "collection.removeGreater.own"), () -> {
             try {
+                if (usersModel.hasPermission(credentials.username, "collection.removeGreater.all")) {
+                    return new RemoveView(collectionModel.removeGreater(livingObject));
+                }
+
                 return new RemoveView(collectionModel.removeGreater(livingObject, credentials.username));
             } catch (Throwable e) {
                 return new RemoveView(e.getLocalizedMessage());
@@ -120,6 +124,8 @@ public class CollectionController {
 
                 final SortedSet<LivingObject> livingObjects = new TreeSet<>(collectionModel.get());
                 livingObjects.forEach(throwing().consumer(writer::write));
+
+                // TODO add to living object writer users
 
                 writer.flush();
                 return new SaveView(filename);

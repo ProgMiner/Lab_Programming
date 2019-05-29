@@ -55,12 +55,15 @@ public final class LabUtils {
             callIfNotNull(map.get("volume"), s -> object.setVolume(Double.parseDouble(s)));
 
             cause = "object's creating time has bad format";
-            callIfNotNull(map.get("creatingTime"), s -> {
+            throwing().unwrap(Exception.class, () -> callIfNotNull(map.get("creatingTime"), throwing().consumer(s -> {
                 LocalDateTime creatingTime = null;
+                Exception exception = null;
 
                 try {
                     creatingTime = LocalDateTime.parse(s, Object.DATE_TIME_FORMATTER);
-                } catch (Throwable ignored) {}
+                } catch (Exception e) {
+                    exception = e;
+                }
 
                 if (creatingTime == null) {
                     try {
@@ -75,7 +78,10 @@ public final class LabUtils {
                 }
 
                 callIfNotNull(creatingTime, object::setCreatingTime);
-            });
+                if (creatingTime == null) {
+                    throw exception;
+                }
+            })));
 
             cause = "object's x has bad format";
             callIfNotNull(map.get("x"), s -> object.setX(Double.parseDouble(s)));

@@ -18,5 +18,3 @@
   - [ ] Done!
 
 ## Bugs
-
-  - Bad multi-users behaviour of commands

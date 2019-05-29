@@ -143,10 +143,12 @@ public class DatabaseCollectionModel implements CollectionModel {
             private static final class LivingObjects {
 
                 private static final String ALL = "" +
-                        "SELECT name, volume, creating_time, x, y, z, lives, items FROM \"%1$s\"";
+                        "SELECT name, volume, creating_time, x, y, z, lives, items FROM \"%1$s\"\n" +
+                        "LEFT OUTER JOIN \"%2$s\" USING(hash_code)";
 
                 private static final String LIMITED = "" +
-                        "SELECT name, volume, creating_time, x, y, z, lives, items FROM \"%1$s\" LIMIT ?";
+                        "SELECT name, volume, creating_time, x, y, z, lives, items FROM \"%1$s\"\n" +
+                        "LEFT OUTER JOIN \"%2$s\" USING(hash_code) LIMIT ?";
             }
 
             private static final String ITEMS = "" +
@@ -164,70 +166,16 @@ public class DatabaseCollectionModel implements CollectionModel {
                     "INSERT INTO \"%1$s\"(hash_code, name, volume, creating_time, x, y, z, lives, items)\n" +
                     "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING";
 
+            private static final String USERS_LIVING_OBJECT = "" +
+                    "INSERT INTO \"%1$s\"(user_id, hash_code)\n" +
+                    "VALUES((SELECT id FROM \"%2$s\" WHERE username = ?), ?) ON CONFLICT DO NOTHING";
+
             private static final String ITEM = "" +
                     "INSERT INTO \"%1$s\"(hash_code, name, volume, creating_time, x, y, z)\n" +
                     "VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING";
 
             private static final String ITEMS_ITEM = "" +
                     "INSERT INTO \"%1$s\"(items, hash_code) VALUES(?, ?) ON CONFLICT DO NOTHING";
-
-            private static final String USERS_LIVING_OBJECT = "" +
-                    "INSERT INTO \"%1$s\"(user_id, hash_code) VALUES((SELECT id FROM \"%2$s\" WHERE username = ?), ?)\n" +
-                    "ON CONFLICT DO NOTHING";
-        }
-
-        private static final class RemoveLower {
-
-            private static final String GET = "" +
-                    "WITH items_metrics AS (\n" +
-                    "    SELECT items, SUM(volume) AS volume\n" +
-                    "    FROM \"%2$s\" INNER JOIN \"%3$s\" USING(hash_code)\n" +
-                    "    GROUP BY items\n" +
-                    ")\n" +
-                    "SELECT hash_code FROM \"%1$s\"\n" +
-                    "WHERE (name < ?\n" +
-                    "   OR (name = ?\n" +
-                    "  AND (volume < ?\n" +
-                    "   OR (volume = ?\n" +
-                    "  AND (creating_time < ?\n" +
-                    "   OR (creating_time = ?\n" +
-                    "  AND (x < ?\n" +
-                    "   OR (x = ?\n" +
-                    "  AND (y < ?\n" +
-                    "   OR (y = ?\n" +
-                    "  AND (z < ?\n" +
-                    "   OR (z = ?\n" +
-                    "  AND (lives < ?\n" +
-                    "   OR (lives = ?\n" +
-                    "  AND ((SELECT volume FROM items_metrics WHERE items = items) < ?\n" +
-                    "      )))))))))))))))";
-        }
-        
-        private static final class RemoveGreater {
-
-            private static final String GET = "" +
-                    "WITH items_metrics AS (\n" +
-                    "    SELECT items, SUM(volume) AS volume\n" +
-                    "    FROM \"%2$s\" INNER JOIN \"%3$s\" USING(hash_code)\n" +
-                    "    GROUP BY items\n" +
-                    ")\n" +
-                    "SELECT hash_code FROM \"%1$s\"\n" +
-                    "WHERE (name > ?\n" +
-                    "   OR (name = ?\n" +
-                    "  AND (volume > ?\n" +
-                    "   OR (volume = ?\n" +
-                    "  AND (creating_time > ?\n" +
-                    "   OR (creating_time = ?\n" +
-                    "  AND (x > ?\n" +
-                    "   OR (x = ?\n" +
-                    "  AND (y > ?\n" +
-                    "   OR (y = ?\n" +
-                    "  AND (z > ?\n" +
-                    "   OR (z = ?\n" +
-                    "  AND (lives > ?\n" +
-                    "   OR (lives = ?\n" +
-                    "  AND ((SELECT volume FROM items_metrics WHERE items = items) > ?\n" +
-                    "      )))))))))))))))";
         }
 
         private static final class RemoveOwned {
@@ -237,14 +185,6 @@ public class DatabaseCollectionModel implements CollectionModel {
             private static final String SPECIFIED_USER = "" +
                     "DELETE FROM \"%1$s\" WHERE user_id = (SELECT id FROM \"%2$s\" WHERE username = ?)\n" +
                     "    AND hash_code = ANY(?)";
-        }
-
-        private static final class RemoveNobodyOwned {
-
-            private static final String LIVING_OBJECTS = "" +
-                    "DELETE FROM \"%1$s\" WHERE hash_code = ANY(?) AND\n" +
-                    "    (SELECT COUNT(*) FROM \"%2$s\" WHERE hash_code = hash_code) = 0\n" +
-                    "RETURNING items";
         }
 
         private static final class RemoveItems {
@@ -266,6 +206,59 @@ public class DatabaseCollectionModel implements CollectionModel {
                     "INSERT INTO \"%1$s\"(key, value) VALUES(?, ?)\n" +
                     "ON CONFLICT(key) DO UPDATE SET value = EXCLUDED.value";
         }
+
+        private static final String REMOVE_LOWER = "" +
+                "WITH items_metrics AS (\n" +
+                "    SELECT items, SUM(volume) AS volume\n" +
+                "    FROM \"%2$s\" INNER JOIN \"%3$s\" USING(hash_code)\n" +
+                "    GROUP BY items\n" +
+                ")\n" +
+                "SELECT hash_code FROM \"%1$s\"\n" +
+                "WHERE (name < ?\n" +
+                "   OR (name = ?\n" +
+                "  AND (volume < ?\n" +
+                "   OR (volume = ?\n" +
+                "  AND (creating_time < ?\n" +
+                "   OR (creating_time = ?\n" +
+                "  AND (x < ?\n" +
+                "   OR (x = ?\n" +
+                "  AND (y < ?\n" +
+                "   OR (y = ?\n" +
+                "  AND (z < ?\n" +
+                "   OR (z = ?\n" +
+                "  AND (lives < ?\n" +
+                "   OR (lives = ?\n" +
+                "  AND ((SELECT volume FROM items_metrics WHERE items = items) < ?\n" +
+                "      )))))))))))))))";
+
+        private static final String REMOVE_GREATER = "" +
+                "WITH items_metrics AS (\n" +
+                "    SELECT items, SUM(volume) AS volume\n" +
+                "    FROM \"%2$s\" INNER JOIN \"%3$s\" USING(hash_code)\n" +
+                "    GROUP BY items\n" +
+                ")\n" +
+                "SELECT hash_code FROM \"%1$s\"\n" +
+                "WHERE (name > ?\n" +
+                "   OR (name = ?\n" +
+                "  AND (volume > ?\n" +
+                "   OR (volume = ?\n" +
+                "  AND (creating_time > ?\n" +
+                "   OR (creating_time = ?\n" +
+                "  AND (x > ?\n" +
+                "   OR (x = ?\n" +
+                "  AND (y > ?\n" +
+                "   OR (y = ?\n" +
+                "  AND (z > ?\n" +
+                "   OR (z = ?\n" +
+                "  AND (lives > ?\n" +
+                "   OR (lives = ?\n" +
+                "  AND ((SELECT volume FROM items_metrics WHERE items = items) > ?\n" +
+                "      )))))))))))))))";
+
+        private static final String REMOVE_NOBODY_OWNED = "" +
+                "DELETE FROM \"%1$s\" WHERE hash_code = ANY(?) AND\n" +
+                "    (SELECT COUNT(*) FROM \"%2$s\" WHERE hash_code = hash_code) = 0\n" +
+                "RETURNING items";
 
         private static final String GET_METADATA = "" +
                 "SELECT key, value FROM \"%1$s\"\n" +
@@ -331,14 +324,6 @@ public class DatabaseCollectionModel implements CollectionModel {
     }
 
     @Override
-    public int add(LivingObject livingObject, String username) {
-        final Map<LivingObject, String> livingObjects = new HashMap<>();
-        livingObjects.put(livingObject, username);
-
-        return addAll(livingObjects);
-    }
-
-    @Override
     public int addAll(Map<LivingObject, String> livingObjects) {
         return templateTransaction(() -> doAddAll(livingObjects));
     }
@@ -354,6 +339,11 @@ public class DatabaseCollectionModel implements CollectionModel {
                         connection.prepareStatement(String.format(Query.AddAll.LIVING_OBJECT,
                                 livingObjectsTableName)))));
 
+        final PreparedStatement usersLivingObjectStatement = throwing().unwrap(SQLException.class, () ->
+                statements.computeIfAbsent("addAll.usersLivingObject", throwing().function(s ->
+                        connection.prepareStatement(String.format(Query.AddAll.USERS_LIVING_OBJECT,
+                                usersLivingObjectsTableName, usersTableName)))));
+
         final PreparedStatement itemStatement = throwing().unwrap(SQLException.class, () ->
                 statements.computeIfAbsent("addAll.item", throwing().function(s ->
                         connection.prepareStatement(String.format(Query.AddAll.ITEM,
@@ -363,11 +353,6 @@ public class DatabaseCollectionModel implements CollectionModel {
                 statements.computeIfAbsent("addAll.itemsItem", throwing().function(s ->
                         connection.prepareStatement(String.format(Query.AddAll.ITEMS_ITEM,
                                 itemsItemsTableName)))));
-
-        final PreparedStatement usersLivingObjectStatement = throwing().unwrap(SQLException.class, () ->
-                statements.computeIfAbsent("addAll.usersLivingObject", throwing().function(s ->
-                        connection.prepareStatement(String.format(Query.AddAll.USERS_LIVING_OBJECT,
-                                usersLivingObjectsTableName, usersTableName)))));
 
         int ret = 0;
         for (LivingObject livingObject : livingObjects.keySet()) {
@@ -388,37 +373,39 @@ public class DatabaseCollectionModel implements CollectionModel {
             livingObjectStatement.setDouble(++pointer, livingObject.getZ());
             livingObjectStatement.setBoolean(++pointer, livingObject.isLives());
             livingObjectStatement.setInt(++pointer, itemsHashCode);
-            int count = livingObjectStatement.executeUpdate();
+            final int count = livingObjectStatement.executeUpdate();
 
             ret += count;
-            if (count > 0) {
-                for (Object item : livingObject.getItems()) {
-                    final int itemHashCode = item.hashCode();
-
-                    pointer = 0;
-                    itemStatement.setInt(++pointer, itemHashCode);
-                    itemStatement.setString(++pointer, item.getName());
-                    itemStatement.setDouble(++pointer, item.getVolume());
-                    itemStatement.setTimestamp(++pointer, Timestamp.valueOf(item.getCreatingTime()));
-                    itemStatement.setDouble(++pointer, item.getX());
-                    itemStatement.setDouble(++pointer, item.getY());
-                    itemStatement.setDouble(++pointer, item.getZ());
-                    itemStatement.executeUpdate();
-
-                    pointer = 0;
-                    itemsItemsStatement.setInt(++pointer, itemsHashCode);
-                    itemsItemsStatement.setInt(++pointer, itemHashCode);
-                    itemsItemsStatement.executeUpdate();
-                }
+            if (count == 0) {
+                continue;
             }
 
             final String username = livingObjects.get(livingObject);
-
             if (username != null) {
                 pointer = 0;
 
                 usersLivingObjectStatement.setString(++pointer, username);
                 usersLivingObjectStatement.setInt(++pointer, livingObjectHashCode);
+                usersLivingObjectStatement.executeUpdate();
+            }
+
+            for (Object item : livingObject.getItems()) {
+                final int itemHashCode = item.hashCode();
+
+                pointer = 0;
+                itemStatement.setInt(++pointer, itemHashCode);
+                itemStatement.setString(++pointer, item.getName());
+                itemStatement.setDouble(++pointer, item.getVolume());
+                itemStatement.setTimestamp(++pointer, Timestamp.valueOf(item.getCreatingTime()));
+                itemStatement.setDouble(++pointer, item.getX());
+                itemStatement.setDouble(++pointer, item.getY());
+                itemStatement.setDouble(++pointer, item.getZ());
+                itemStatement.executeUpdate();
+
+                pointer = 0;
+                itemsItemsStatement.setInt(++pointer, itemsHashCode);
+                itemsItemsStatement.setInt(++pointer, itemHashCode);
+                itemsItemsStatement.executeUpdate();
             }
         }
 
@@ -434,8 +421,8 @@ public class DatabaseCollectionModel implements CollectionModel {
     public int removeLower(LivingObject livingObject, String username) {
         return templateTransaction(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
-                    statements.computeIfAbsent("removeLower.get", throwing().function(s ->
-                            connection.prepareStatement(String.format(Query.RemoveLower.GET,
+                    statements.computeIfAbsent("removeLower", throwing().function(s ->
+                            connection.prepareStatement(String.format(Query.REMOVE_LOWER,
                                     livingObjectsTableName, itemsItemsTableName, itemsTableName)))));
 
             int pointer = 0;
@@ -456,10 +443,8 @@ public class DatabaseCollectionModel implements CollectionModel {
             preparedStatement.setDouble(++pointer, livingObject.getItems()
                     .stream().mapToDouble(Object::getVolume).sum());
 
-            final Set<Integer> hashCodes = mapResultSet(preparedStatement.executeQuery(), row ->
-                    row.getInt(1)).collect(Collectors.toSet());
-
-            return removeOwned(hashCodes, username);
+            return removeOwned(mapResultSet(preparedStatement.executeQuery(), row ->
+                    row.getInt(1)).collect(Collectors.toSet()), username);
         });
     }
 
@@ -467,8 +452,8 @@ public class DatabaseCollectionModel implements CollectionModel {
     public int removeGreater(LivingObject livingObject, String username) {
         return templateTransaction(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
-                    statements.computeIfAbsent("removeGreater.get", throwing().function(s ->
-                            connection.prepareStatement(String.format(Query.RemoveGreater.GET,
+                    statements.computeIfAbsent("removeGreater", throwing().function(s ->
+                            connection.prepareStatement(String.format(Query.REMOVE_GREATER,
                                     livingObjectsTableName, itemsItemsTableName, itemsTableName)))));
 
             int pointer = 0;
@@ -489,10 +474,8 @@ public class DatabaseCollectionModel implements CollectionModel {
             preparedStatement.setDouble(++pointer, livingObject.getItems()
                     .stream().mapToDouble(Object::getVolume).sum());
 
-            final Set<Integer> hashCodes = mapResultSet(preparedStatement.executeQuery(), row ->
-                    row.getInt(1)).collect(Collectors.toSet());
-
-            return removeOwned(hashCodes, username);
+            return removeOwned(mapResultSet(preparedStatement.executeQuery(), row ->
+                    row.getInt(1)).collect(Collectors.toSet()), username);
         });
     }
 
@@ -530,8 +513,8 @@ public class DatabaseCollectionModel implements CollectionModel {
         }
 
         final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
-                statements.computeIfAbsent("removeNobodyOwned.livingObjects", throwing().function(s ->
-                        connection.prepareStatement(String.format(Query.RemoveNobodyOwned.LIVING_OBJECTS,
+                statements.computeIfAbsent("removeNobodyOwned", throwing().function(s ->
+                        connection.prepareStatement(String.format(Query.REMOVE_NOBODY_OWNED,
                                 livingObjectsTableName, usersLivingObjectsTableName)))));
 
         preparedStatement.setArray(1, connection.createArrayOf("integer", hashCodes.toArray(arrayOf())));
@@ -583,7 +566,7 @@ public class DatabaseCollectionModel implements CollectionModel {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("get.livingObjects.all", throwing().function(s ->
                             connection.prepareStatement(String.format(Query.Get.LivingObjects.ALL,
-                                    livingObjectsTableName)))));
+                                    livingObjectsTableName, usersLivingObjectsTableName)))));
 
             return get(preparedStatement.executeQuery());
         });
@@ -595,7 +578,7 @@ public class DatabaseCollectionModel implements CollectionModel {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("get.livingObjects.limited", throwing().function(s ->
                             connection.prepareStatement(String.format(Query.Get.LivingObjects.LIMITED,
-                                    livingObjectsTableName)))));
+                                    livingObjectsTableName, usersLivingObjectsTableName)))));
 
             preparedStatement.setLong(1, count);
 

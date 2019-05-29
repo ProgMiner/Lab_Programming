@@ -30,7 +30,8 @@ public interface UsersModel {
             "collection.remove.own",
             "collection.removeLower.own",
             "collection.removeGreater.own",
-            "collection.importObjects"
+            "collection.importObjects",
+            "users.changePassword.own"
     );
 
     boolean add(Credentials credentials, String email);
