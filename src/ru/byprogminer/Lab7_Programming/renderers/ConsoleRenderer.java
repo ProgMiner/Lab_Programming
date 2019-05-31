@@ -127,7 +127,9 @@ public class ConsoleRenderer implements Renderer {
             final ChangePasswordView changePasswordView = (ChangePasswordView) view;
 
             if (changePasswordView.ok) {
-                console.println("Password changed successfully.");
+                console.println("" +
+                        "Password changed successfully.\n" +
+                        "You may need reset current user if you change it's password.");
             }
 
             return;
