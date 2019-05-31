@@ -231,7 +231,12 @@ public class ClientMain {
         }
 
         try {
-            ret.put("port", Short.parseShort(args[0]));
+            final Integer port = Integer.parseInt(args[0]);
+            if (port > 65536) {
+                throw new IllegalArgumentException("port out of range");
+            }
+
+            ret.put("port", port);
         } catch (Throwable e) {
             log.log(Level.SEVERE, "bad port provided: " + args[0], e);
             System.err.printf("Bad port provided: %s.\n", args[0]);
@@ -251,7 +256,7 @@ public class ClientMain {
 
     private static int throwingMain(Map<String, Object> args) {
         final String hostname = (String) args.get("hostname");
-        final short port = (short) args.get("port");
+        final int port = (int) args.get("port");
 
         if (hostname != null) {
             address = new InetSocketAddress(hostname, port);

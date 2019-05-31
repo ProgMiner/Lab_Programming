@@ -81,7 +81,12 @@ public class ServerMain {
         }
 
         try {
-            ret.put("port", Short.parseShort(args[0]));
+            final Integer port = Integer.parseInt(args[0]);
+            if (port > 65536) {
+                throw new IllegalArgumentException("port out of range");
+            }
+
+            ret.put("port", port);
         } catch (Throwable e) {
             log.log(Level.SEVERE, "bad port provided: " + args[0], e);
             System.err.printf("Bad port provided: %s.\n", args[0]);
@@ -150,7 +155,7 @@ public class ServerMain {
             RemoteFrontend tmpRemoteFrontend = null;
 
             try {
-                final Short port = (Short) args.get("port");
+                final Integer port = (Integer) args.get("port");
 
                 final DatagramChannel channel = DatagramChannel.open();
                 if (port == null) {
