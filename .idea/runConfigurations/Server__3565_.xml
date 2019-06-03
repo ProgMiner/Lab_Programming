@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Server (3565)" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="ru.byprogminer.Lab7_Programming.ServerMain" />
-    <module name="Lab7_Programming" />
+    <module name="Lab8_Programming" />
     <option name="PROGRAM_PARAMETERS" value="3565" />
     <method v="2">
       <option name="Make" enabled="true" />

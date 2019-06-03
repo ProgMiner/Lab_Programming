@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Client (10000)" type="Application" factoryName="Application" singleton="false">
     <option name="MAIN_CLASS_NAME" value="ru.byprogminer.Lab7_Programming.ClientMain" />
-    <module name="Lab7_Programming" />
+    <module name="Lab8_Programming" />
     <option name="PROGRAM_PARAMETERS" value="10000" />
     <method v="2">
       <option name="Make" enabled="true" />
