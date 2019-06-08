@@ -3,6 +3,7 @@ package ru.byprogminer.Lab3_Programming;
 import ru.byprogminer.Lab4_Programming.DeathException;
 import ru.byprogminer.Lab4_Programming.NotFoundException;
 
+import java.awt.image.BufferedImage;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -17,9 +18,11 @@ public class LivingObject extends Object implements Hitter, Picker, Movable, Thi
 
     private static final String STRING_FORMAT = "LivingObject %s with volume %s at (%s, %s, %s) created %s, currently %s, %s";
 
-    private final Set<Object> items = new HashSet<>();
-
     private volatile boolean lives = true;
+
+    private volatile BufferedImage image = null;
+
+    private final Set<Object> items = new HashSet<>();
 
     public LivingObject(String name) {
         super(name);
@@ -51,6 +54,14 @@ public class LivingObject extends Object implements Hitter, Picker, Movable, Thi
         if (!lives) {
             throw new DeathException(this);
         }
+    }
+
+    public BufferedImage getImage() {
+        return image;
+    }
+
+    public void setImage(BufferedImage image) {
+        this.image = image;
     }
 
     @Override
