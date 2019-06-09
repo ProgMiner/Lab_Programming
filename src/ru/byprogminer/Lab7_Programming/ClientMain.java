@@ -30,8 +30,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
-import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
+import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 import static ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend.CLIENT_TIMEOUT;
 import static ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend.SO_TIMEOUT;
 
@@ -208,9 +207,7 @@ public class ClientMain {
             final int result = throwingMain(parseArguments(args));
             log.info("Finish");
 
-            if (result != 0) {
-                System.exit(result);
-            }
+            System.exit(result);
         } catch (Throwable e) {
             System.err.println("An unknown error occurred. See logs for details or try again.");
             log.log(Level.SEVERE, "Unknown error", e);
@@ -231,12 +228,12 @@ public class ClientMain {
         }
 
         try {
-            final Integer port = Integer.parseInt(args[0]);
-            if (port > 65536) {
-                throw new IllegalArgumentException("port out of range");
+            final int port = validatePort(args[0]);
+            if (port == 0) {
+                throw new IllegalArgumentException("port is not allowed");
             }
 
-            ret.put("port", port);
+            ret.put("port", validatePort(args[0]));
         } catch (Throwable e) {
             log.log(Level.SEVERE, "bad port provided: " + args[0], e);
             System.err.printf("Bad port provided: %s.\n", args[0]);

@@ -3,6 +3,7 @@
 ## Checklist
 
   - Implement GUI
+    - [X] Server starting window
     - [ ] Connect window
     - [ ] Main window
       - [ ] Map
@@ -21,6 +22,8 @@
         - [ ] Users window
       - [ ] About window
     - [ ] Views handling
+  - [ ] L10n and i18n
+  - [ ] Implement all GUI abilities in CUI
   - [ ] ...
   - [ ] Done!
 

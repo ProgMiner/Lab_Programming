@@ -5,14 +5,17 @@ import ru.byprogminer.Lab6_Programming.udp.PacketUtils;
 import ru.byprogminer.Lab6_Programming.udp.UdpServerSocket;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.controllers.UsersController;
-import ru.byprogminer.Lab7_Programming.frontends.LocalFrontend;
+import ru.byprogminer.Lab7_Programming.frontends.ConsoleFrontend;
+import ru.byprogminer.Lab7_Programming.frontends.GuiFrontend;
 import ru.byprogminer.Lab7_Programming.frontends.RemoteFrontend;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
 import ru.byprogminer.Lab7_Programming.models.UsersModel;
+import ru.byprogminer.Lab8_Programming.gui.ServerStartingWindow;
 
+import javax.swing.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.DatagramChannel;
@@ -23,8 +26,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.validatePort;
 
 public class ServerMain {
 
@@ -41,10 +49,13 @@ public class ServerMain {
     }
 
     private static final String USAGE = "" +
-            "Usage: java -jar lab7_server.jar [port]\n" +
+            "Usage: java -jar lab7_server.jar [--gui] [port]\n" +
+            "  - --gui\n" +
+            "    Option for enable the GUI" +
             "  - port\n" +
             "    Not required port number for opened server";
 
+    private static final int DEFAULT_SERVER_PORT = 3565;
     private static final String DB_PROPERTIES = "/db.properties";
 
     private static final Scanner stdinScanner = new Scanner(System.in);
@@ -63,9 +74,7 @@ public class ServerMain {
             final int result = throwingMain(parseArguments(args));
             log.info("Finish");
 
-            if (result != 0) {
-                System.exit(result);
-            }
+            System.exit(result);
         } catch (Throwable e) {
             log.log(Level.SEVERE, "Unknown error", e);
             System.err.println("An unknown error occurred. See logs for details or try again.");
@@ -80,16 +89,17 @@ public class ServerMain {
             return ret;
         }
 
-        try {
-            final Integer port = Integer.parseInt(args[0]);
-            if (port > 65536) {
-                throw new IllegalArgumentException("port out of range");
-            }
+        int pointer = 0;
+        if ("--gui".equals(args[pointer])) {
+            ret.put("gui", true);
+            ++pointer;
+        }
 
-            ret.put("port", port);
+        try {
+            ret.put("port", validatePort(args[pointer]));
         } catch (Throwable e) {
-            log.log(Level.SEVERE, "bad port provided: " + args[0], e);
-            System.err.printf("Bad port provided: %s.\n", args[0]);
+            log.log(Level.SEVERE, "bad port provided: " + args[pointer], e);
+            System.err.printf("Bad port provided: %s.\n", args[pointer]);
             System.err.println(USAGE);
 
             System.exit(Status.BAD_PORT_PROVIDED);
@@ -148,21 +158,29 @@ public class ServerMain {
         final UsersController usersController = new UsersController(usersModel);
         final CollectionController collectionController = new CollectionController(usersModel, collectionModel);
 
-        final LocalFrontend localFrontend = new LocalFrontend(usersController, collectionController);
-        final RemoteFrontend remoteFrontend;
+        if ((Boolean) args.getOrDefault("gui", false)) {
+            return guiMain(args, usersController, collectionController);
+        } else {
+            return noGuiMain(args, usersController, collectionController);
+        }
+    }
+
+    private static int noGuiMain(
+            Map<String, Object> args,
+            UsersController usersController,
+            CollectionController collectionController
+    ) {
+        final Frontend consoleFrontend = new ConsoleFrontend(usersController, collectionController);
+        final Frontend remoteFrontend;
 
         {
             RemoteFrontend tmpRemoteFrontend = null;
 
             try {
-                final Integer port = (Integer) args.get("port");
+                final int port = (int) args.getOrDefault("port", 0);
 
                 final DatagramChannel channel = DatagramChannel.open();
-                if (port == null) {
-                    channel.bind(null);
-                } else {
-                    channel.bind(new InetSocketAddress(port));
-                }
+                channel.bind(new InetSocketAddress(port));
 
                 final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
                 tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
@@ -189,10 +207,82 @@ public class ServerMain {
             remoteFrontend = tmpRemoteFrontend;
         }
 
-        localFrontend.exec();
+        consoleFrontend.exec();
 
         if (remoteFrontend != null) {
             remoteFrontend.stop();
+        }
+
+        return 0;
+    }
+
+    private static int guiMain(
+            Map<String, Object> args,
+            UsersController usersController,
+            CollectionController collectionController
+    ) {
+        final Frontend guiFrontend = new GuiFrontend();
+        final AtomicReference<Frontend> remoteFrontend = new AtomicReference<>();
+
+        final ServerStartingWindow serverStartingWindow = new ServerStartingWindow((Integer) args.
+                getOrDefault("port", DEFAULT_SERVER_PORT));
+
+        final AtomicBoolean exec = new AtomicBoolean();
+        final Supplier<Boolean> execLambda = () -> {
+            exec.set(true);
+            return true;
+        };
+
+        serverStartingWindow.setSkipListener(execLambda);
+        serverStartingWindow.setStartListener((address, port) -> {
+            final RemoteFrontend tmpRemoteFrontend;
+
+            try {
+                final DatagramChannel channel = DatagramChannel.open();
+                channel.bind(new InetSocketAddress(address, port));
+
+                final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
+                tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
+
+                final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);
+                remoteFrontendThread.setName("Remote frontend");
+                remoteFrontendThread.start();
+
+                while (remoteFrontendThread.getState() != Thread.State.RUNNABLE) {
+                    Thread.yield();
+                }
+
+                final SocketAddress localAddress = channel.getLocalAddress();
+                if (localAddress instanceof InetSocketAddress) {
+                    final InetSocketAddress inetAddress = (InetSocketAddress) localAddress;
+
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(serverStartingWindow,
+                            "Server opened at local port " + inetAddress.getHostString() + ":" + inetAddress.getPort()));
+                }
+            } catch (Throwable e) {
+                log.log(Level.INFO, "an error occurred while server starting", e);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(serverStartingWindow,
+                        "An error occurred while server starting"));
+
+                return false;
+            }
+
+            remoteFrontend.set(tmpRemoteFrontend);
+            return execLambda.get();
+        });
+
+        serverStartingWindow.setLocationRelativeTo(null);
+        serverStartingWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        SwingUtilities.invokeLater(() -> serverStartingWindow.setVisible(true));
+        while (!exec.get()) {
+            Thread.yield();
+        }
+
+        guiFrontend.exec();
+
+        final Frontend tmpRemoteFrontend = remoteFrontend.get();
+        if (tmpRemoteFrontend != null) {
+            tmpRemoteFrontend.stop();
         }
 
         return 0;

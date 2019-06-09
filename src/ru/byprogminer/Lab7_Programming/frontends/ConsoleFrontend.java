@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.jsonToLivingObject;
 
-public class LocalFrontend implements Frontend {
+public class ConsoleFrontend implements Frontend {
 
     private class CommandListener {
 
@@ -203,7 +203,7 @@ public class LocalFrontend implements Frontend {
     private final CollectionController collectionController;
     private final UsersController usersController;
 
-    public LocalFrontend(UsersController usersController, CollectionController collectionController) {
+    public ConsoleFrontend(UsersController usersController, CollectionController collectionController) {
         this.collectionController = collectionController;
         this.usersController = usersController;
     }

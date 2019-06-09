@@ -172,6 +172,22 @@ public final class LabUtils {
         return new HashSet<>(Arrays.asList(elements));
     }
 
+    public static int validatePort(String stringPort) throws IllegalArgumentException {
+        stringPort = stringPort.trim();
+
+        if (stringPort.isEmpty()) {
+            return 0;
+        }
+
+        final int port = Integer.parseInt(stringPort);
+
+        if (port < 0 || port > 65535) {
+            throw new IllegalArgumentException("port out of range");
+        }
+
+        return port;
+    }
+
     public static <T, E extends Exception> ThrowingSupplier<T, E> supplier(ThrowingRunnable<E> code, T value) {
         return () -> {
             code.run();
