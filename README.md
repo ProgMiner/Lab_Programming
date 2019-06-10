@@ -4,7 +4,6 @@
 
   - Implement GUI
     - [X] Server starting window
-    - [ ] Connect window
     - [ ] Main window
       - [ ] Map
       - [ ] List
@@ -22,6 +21,7 @@
         - [ ] Users window
       - [ ] About window
     - [ ] Views handling
+  - [ ] Connect window
   - [ ] L10n and i18n
   - [ ] Implement all GUI abilities in CUI
   - [ ] ...
