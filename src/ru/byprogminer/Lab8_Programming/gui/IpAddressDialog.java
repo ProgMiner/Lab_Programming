@@ -85,8 +85,8 @@ public class IpAddressDialog extends ActionRotationDialog<IpAddressDialog.Action
 
         if (kind.okText != null) {
             okButton.setText(kind.okText);
-            okButton.setMargin(DEFAULT_MARGIN);
-            okButton.setFont(DEFAULT_FONT.deriveFont(Font.BOLD));
+            okButton.setFont(DEFAULT_BUTTON_FONT);
+            okButton.setMargin(DEFAULT_BUTTON_MARGIN);
             okButton.addActionListener(actionEvent -> {
                 if (getAction() != null) {
                     return;
@@ -109,8 +109,8 @@ public class IpAddressDialog extends ActionRotationDialog<IpAddressDialog.Action
 
         if (kind.cancelText != null) {
             cancelButton.setText(kind.cancelText);
-            cancelButton.setMargin(DEFAULT_MARGIN);
-            cancelButton.setFont(DEFAULT_FONT.deriveFont(Font.BOLD));
+            cancelButton.setFont(DEFAULT_BUTTON_FONT);
+            cancelButton.setMargin(DEFAULT_BUTTON_MARGIN);
             cancelButton.addActionListener(actionEvent -> {
                 if (getAction() == null) {
                     setAllEnabled(false);

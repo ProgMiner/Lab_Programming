@@ -13,6 +13,7 @@ import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
 import ru.byprogminer.Lab7_Programming.models.UsersModel;
+import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab8_Programming.gui.IpAddressDialog;
 
 import javax.swing.*;
@@ -31,7 +32,6 @@ import java.util.logging.Logger;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.validatePort;
-import static ru.byprogminer.Lab8_Programming.gui.GuiUtils.BASE_APP_NAME;
 
 public class ServerMain {
 
@@ -46,6 +46,8 @@ public class ServerMain {
         private static final int USERS_MODEL_INIT_ERROR = 5;
         private static final int COLLECTION_MODEL_INIT_ERROR = 6;
     }
+
+    public static final String APP_NAME = "Lab8_Programming";
 
     private static final String USAGE = "" +
             "Usage: java -jar lab7_server.jar [--gui] [port]\n" +
@@ -220,15 +222,13 @@ public class ServerMain {
             UsersController usersController,
             CollectionController collectionController
     ) {
-        final Frontend guiFrontend = new GuiFrontend();
+        final GuiRenderer guiRenderer = new GuiRenderer(APP_NAME);
+        final Frontend guiFrontend = new GuiFrontend(guiRenderer);
         Frontend remoteFrontend = null;
 
-        final JFrame mainWindow = new JFrame(BASE_APP_NAME);
-        mainWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mainWindow.setLocationRelativeTo(null);
-
-        final IpAddressDialog serverStartingDialog = new IpAddressDialog(mainWindow, BASE_APP_NAME,
+        final IpAddressDialog serverStartingDialog = new IpAddressDialog(guiRenderer.mainWindow, APP_NAME,
                 IpAddressDialog.Kind.SERVER_STARTING, (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
+        serverStartingDialog.setLocationRelativeTo(null);
 
         boolean exec = false;
         serverStartingDialog.start();
@@ -260,8 +260,8 @@ public class ServerMain {
                         if (localAddress instanceof InetSocketAddress) {
                             final InetSocketAddress inetAddress = (InetSocketAddress) localAddress;
 
-                            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(serverStartingDialog,
-                                    "Server opened at local port " + inetAddress.getHostString() + ":" + inetAddress.getPort()));
+                            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(guiRenderer.mainWindow,
+                                    "Server opened at address " + inetAddress.getHostString() + ":" + inetAddress.getPort()));
                         }
                     } catch (Throwable e) {
                         log.log(Level.INFO, "an error occurred while server starting", e);
