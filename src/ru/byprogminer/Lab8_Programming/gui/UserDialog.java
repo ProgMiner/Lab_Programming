@@ -2,6 +2,8 @@ package ru.byprogminer.Lab8_Programming.gui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -21,11 +23,13 @@ public class UserDialog extends JDialog {
 
     public static final class Event {
 
+        public final UserDialog dialog;
         public final String username;
         public final String email;
         public final char[] password;
 
-        private Event(String username, String email, char[] password) {
+        private Event(UserDialog dialog, String username, String email, char[] password) {
+            this.dialog = dialog;
             this.username = username;
             this.email = email;
             this.password = password;
@@ -56,6 +60,9 @@ public class UserDialog extends JDialog {
             this(okText, cancelText, Field.USERNAME, Field.PASSWORD);
         }
     }
+
+    private static final String ENTER_ACTION = "enter";
+    private static final String ESCAPE_ACTION = "escape";
 
     private final int margin = 5;
 
@@ -138,17 +145,30 @@ public class UserDialog extends JDialog {
 
         contentPane.setBorder(BorderFactory.createEmptyBorder(margin, margin, margin, margin));
         setContentPane(contentPane);
+
+        final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ENTER_ACTION);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), ESCAPE_ACTION);
+
+        final ActionMap actionMap = contentPane.getActionMap();
+        actionMap.put(ENTER_ACTION, new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                sendEvent(Listener::okButtonClicked);
+            }
+        });
+        actionMap.put(ESCAPE_ACTION, new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                sendEvent(Listener::cancelButtonClicked);
+            }
+        });
+        setLocationRelativeTo(parentWindow);
         pack();
 
         setMinimumSize(getSize());
-    }
-
-    public void setAllEnabled(boolean enabled) {
-        usernameTextField.setEnabled(enabled);
-        emailTextField.setEnabled(enabled);
-        passwordPasswordField.setEnabled(enabled);
-        okButton.setEnabled(enabled);
-        cancelButton.setEnabled(enabled);
     }
 
     public void addListener(Listener listener) {
@@ -160,8 +180,8 @@ public class UserDialog extends JDialog {
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler) {
-        sendEvent(handler, new Event(usernameTextField.getText(), emailTextField.getText(),
-                passwordPasswordField.getPassword()));
+        sendEvent(handler, new Event(this, usernameTextField.getText(),
+                emailTextField.getText(), passwordPasswordField.getPassword()));
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler, Event event) {

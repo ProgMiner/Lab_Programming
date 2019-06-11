@@ -2,6 +2,8 @@ package ru.byprogminer.Lab8_Programming.gui;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -21,10 +23,12 @@ public class IpAddressDialog extends JDialog {
 
     public static final class Event {
 
+        public final IpAddressDialog dialog;
         public final String address;
         public final int port;
 
-        private Event(String address, int port) {
+        private Event(IpAddressDialog dialog, String address, int port) {
+            this.dialog = dialog;
             this.address = address;
             this.port = port;
         }
@@ -43,6 +47,9 @@ public class IpAddressDialog extends JDialog {
             this.cancelText = cancelText;
         }
     }
+
+    private static final String ENTER_ACTION = "enter";
+    private static final String ESCAPE_ACTION = "escape";
 
     private final int margin = 5;
 
@@ -77,10 +84,13 @@ public class IpAddressDialog extends JDialog {
         portLabel.setBorder(DEFAULT_MARGIN_BORDER);
         contentPane.add(portLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
 
+        final JSpinner.DefaultEditor portSpinnerEditor = (JSpinner.DefaultEditor) portSpinner.getEditor();
+
+        portSpinnerEditor.getTextField().setBorder(DEFAULT_MARGIN_BORDER);
+        portSpinnerEditor.getTextField().setHorizontalAlignment(JTextField.LEFT);
+
         portSpinner.setFont(DEFAULT_FONT);
         portSpinner.getModel().setValue(initialPort);
-        ((JSpinner.DefaultEditor) portSpinner.getEditor()).getTextField().setBorder(DEFAULT_MARGIN_BORDER);
-        ((JSpinner.DefaultEditor) portSpinner.getEditor()).getTextField().setHorizontalAlignment(JTextField.LEFT);
         contentPane.add(portSpinner, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
         ++row;
 
@@ -106,17 +116,32 @@ public class IpAddressDialog extends JDialog {
         }
 
         contentPane.setBorder(BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+
+        final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ENTER_ACTION);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), ESCAPE_ACTION);
+
+        final ActionMap actionMap = contentPane.getActionMap();
+        actionMap.put(ENTER_ACTION, new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                sendEvent(Listener::okButtonClicked);
+            }
+        });
+        actionMap.put(ESCAPE_ACTION, new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent actionEvent) {
+                sendEvent(Listener::cancelButtonClicked);
+            }
+        });
         setContentPane(contentPane);
+        setLocationRelativeTo(parentWindow);
         pack();
 
+        addressTextField.requestFocus();
         setMinimumSize(getSize());
-    }
-
-    public void setAllEnabled(boolean enabled) {
-        addressTextField.setEnabled(enabled);
-        portSpinner.setEnabled(enabled);
-        okButton.setEnabled(enabled);
-        cancelButton.setEnabled(enabled);
     }
 
     public void addListener(Listener listener) {
@@ -137,7 +162,7 @@ public class IpAddressDialog extends JDialog {
             return;
         }
 
-        sendEvent(handler, new Event(addressTextField.getText(), port));
+        sendEvent(handler, new Event(this, addressTextField.getText(), port));
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler, Event event) {

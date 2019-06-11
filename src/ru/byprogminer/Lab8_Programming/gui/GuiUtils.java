@@ -1,6 +1,5 @@
 package ru.byprogminer.Lab8_Programming.gui;
 
-import ru.byprogminer.Lab7_Programming.Credentials;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import javax.swing.*;
@@ -46,11 +45,11 @@ public class GuiUtils {
         return factoryMethod.createBorder(margin.top, margin.right, margin.bottom, margin.left);
     }
 
-    public static String getWindowTitle(String name, Credentials currentUser) {
+    public static String getWindowTitle(String name, String currentUser) {
         if (currentUser == null) {
             return name;
         }
 
-        return name + " (" + currentUser.username + ")";
+        return name + " (" + currentUser + ")";
     }
 }

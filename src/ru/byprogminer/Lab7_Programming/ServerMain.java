@@ -13,6 +13,7 @@ import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
 import ru.byprogminer.Lab7_Programming.models.UsersModel;
+import ru.byprogminer.Lab8_Programming.gui.GuiDisabler;
 import ru.byprogminer.Lab8_Programming.gui.IpAddressDialog;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
@@ -239,7 +240,7 @@ public class ServerMain {
 
                 @Override
                 public void okButtonClicked(IpAddressDialog.Event event) {
-                    tmpServerStartingDialog.setAllEnabled(false);
+                    final GuiDisabler<IpAddressDialog> dialogDisabler = GuiDisabler.disable(event.dialog);
 
                     new Thread(() -> {
                         try {
@@ -269,7 +270,7 @@ public class ServerMain {
                                 }
                             } catch (Throwable e) {
                                 log.log(Level.INFO, "an error occurred while server starting", e);
-                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tmpServerStartingDialog,
+                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(event.dialog,
                                         arrayOf("An error occurred while server starting", e.getLocalizedMessage())));
 
                                 return;
@@ -278,14 +279,14 @@ public class ServerMain {
                             remoteFrontend.set(tmpRemoteFrontend);
                             SwingUtilities.invokeLater(() -> cancelButtonClicked(event));
                         } finally {
-                            SwingUtilities.invokeLater(() -> tmpServerStartingDialog.setAllEnabled(true));
+                            SwingUtilities.invokeLater(dialogDisabler::revert);
                         }
                     }).start();
                 }
 
                 @Override
                 public void cancelButtonClicked(IpAddressDialog.Event event) {
-                    tmpServerStartingDialog.setVisible(false);
+                    event.dialog.setVisible(false);
                     exec.set(true);
                 }
             });
