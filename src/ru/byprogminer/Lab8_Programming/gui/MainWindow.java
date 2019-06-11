@@ -6,6 +6,11 @@ import java.awt.*;
 @SuppressWarnings("FieldCanBeLocal")
 public class MainWindow extends JFrame {
 
+    public interface Listener {
+
+        void loginButtonClicked();
+    }
+
     private final String name;
     private final int margin = 5;
 

@@ -199,6 +199,26 @@ public final class LabUtils {
         return supplier(code, null);
     }
 
+    public static <T> boolean contains(T[] array, T element) {
+        for (T t : array) {
+            if (element == t || (element != null && element.equals(t)) || t == null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static <T> boolean containsRef(T[] array, T element) {
+        for (T t : array) {
+            if (element == t) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     @SuppressWarnings("unchecked")
     public static LivingObject jsonToLivingObject(String json) {
         String exception = "an error occurred while json reading";

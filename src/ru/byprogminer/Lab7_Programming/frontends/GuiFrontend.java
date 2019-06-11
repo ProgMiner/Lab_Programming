@@ -1,27 +1,32 @@
 package ru.byprogminer.Lab7_Programming.frontends;
 
 import ru.byprogminer.Lab7_Programming.Frontend;
+import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
+import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
 import javax.swing.*;
 
 public class GuiFrontend implements Frontend {
 
-    private final GuiRenderer renderer;
+    private final MainWindow mainWindow;
+    private final Renderer renderer;
 
-    public GuiFrontend(GuiRenderer renderer) {
-        this.renderer = renderer;
+    public GuiFrontend(MainWindow mainWindow) {
+        this.mainWindow = mainWindow;
+
+        this.renderer = new GuiRenderer(mainWindow);
     }
 
     @Override
     public void exec() throws IllegalStateException {
-        SwingUtilities.invokeLater(() -> renderer.mainWindow.setVisible(true));
+        SwingUtilities.invokeLater(() -> mainWindow.setVisible(true));
 
-        while (!renderer.mainWindow.isVisible()) {
+        while (!mainWindow.isVisible()) {
             Thread.yield();
         }
 
-        while (renderer.mainWindow.isVisible()) {
+        while (mainWindow.isVisible()) {
             Thread.yield();
         }
     }

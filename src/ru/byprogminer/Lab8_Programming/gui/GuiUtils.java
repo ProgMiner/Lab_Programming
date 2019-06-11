@@ -23,6 +23,7 @@ public class GuiUtils {
 
     public static final Font DEFAULT_FONT;
     public static final Font DEFAULT_BUTTON_FONT;
+    public static final int DEFAULT_TEXT_FIELD_COLUMNS = 10;
     public static final Insets DEFAULT_MARGIN = new Insets(4, 3, 2, 3);
     public static final Insets DEFAULT_BUTTON_MARGIN = new Insets(5, 30, 4, 30);
     public static final Border DEFAULT_MARGIN_BORDER =

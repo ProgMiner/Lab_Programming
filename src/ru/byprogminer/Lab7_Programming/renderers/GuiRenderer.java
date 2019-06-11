@@ -6,10 +6,10 @@ import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
 public class GuiRenderer implements Renderer {
 
-    public final MainWindow mainWindow;
+    private final MainWindow mainWindow;
 
-    public GuiRenderer(String name) {
-        mainWindow = new MainWindow(name);
+    public GuiRenderer(MainWindow mainWindow) {
+        this.mainWindow = mainWindow;
     }
 
     @Override

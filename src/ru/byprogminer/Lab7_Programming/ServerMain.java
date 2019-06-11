@@ -13,8 +13,8 @@ import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
 import ru.byprogminer.Lab7_Programming.models.UsersModel;
-import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab8_Programming.gui.IpAddressDialog;
+import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
 import javax.swing.*;
 import java.net.InetSocketAddress;
@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -222,73 +224,90 @@ public class ServerMain {
             UsersController usersController,
             CollectionController collectionController
     ) {
-        final GuiRenderer guiRenderer = new GuiRenderer(APP_NAME);
-        final Frontend guiFrontend = new GuiFrontend(guiRenderer);
-        Frontend remoteFrontend = null;
+        final MainWindow mainWindow = new MainWindow(APP_NAME);
+        final Frontend guiFrontend = new GuiFrontend(mainWindow);
+        final AtomicReference<Frontend> remoteFrontend = new AtomicReference<>();
+        final AtomicBoolean exec = new AtomicBoolean();
 
-        final IpAddressDialog serverStartingDialog = new IpAddressDialog(guiRenderer.mainWindow, APP_NAME,
-                IpAddressDialog.Kind.SERVER_STARTING, (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
-        serverStartingDialog.setLocationRelativeTo(null);
+        final AtomicReference<IpAddressDialog> serverStartingDialog = new AtomicReference<>();
+        SwingUtilities.invokeLater(() -> {
+            final IpAddressDialog tmpServerStartingDialog = new IpAddressDialog(mainWindow, APP_NAME,
+                    IpAddressDialog.Kind.SERVER_STARTING, (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
 
-        boolean exec = false;
-        serverStartingDialog.start();
-        while (serverStartingDialog.hasMoreElements()) {
-            try {
-                final IpAddressDialog.Action action = serverStartingDialog.nextElement();
+            tmpServerStartingDialog.setLocationRelativeTo(null);
+            tmpServerStartingDialog.addListener(new IpAddressDialog.Listener() {
 
-                if (action instanceof IpAddressDialog.Action.Ok) {
-                    final IpAddressDialog.Action.Ok okAction = (IpAddressDialog.Action.Ok) action;
+                @Override
+                public void okButtonClicked(IpAddressDialog.Event event) {
+                    tmpServerStartingDialog.setAllEnabled(false);
 
-                    final RemoteFrontend tmpRemoteFrontend;
+                    new Thread(() -> {
+                        try {
+                            final RemoteFrontend tmpRemoteFrontend;
 
-                    try {
-                        final DatagramChannel channel = DatagramChannel.open();
-                        channel.bind(new InetSocketAddress(okAction.address, okAction.port));
+                            try {
+                                final DatagramChannel channel = DatagramChannel.open();
+                                channel.bind(new InetSocketAddress(event.address, event.port));
 
-                        final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
-                        tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
+                                final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
+                                tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
 
-                        final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);
-                        remoteFrontendThread.setName("Remote frontend");
-                        remoteFrontendThread.start();
+                                final Thread remoteFrontendThread = new Thread(tmpRemoteFrontend::exec);
+                                remoteFrontendThread.setName("Remote frontend");
+                                remoteFrontendThread.start();
 
-                        while (remoteFrontendThread.getState() != Thread.State.RUNNABLE) {
-                            Thread.yield();
+                                while (remoteFrontendThread.getState() != Thread.State.RUNNABLE) {
+                                    Thread.yield();
+                                }
+
+                                final SocketAddress localAddress = channel.getLocalAddress();
+                                if (localAddress instanceof InetSocketAddress) {
+                                    final InetSocketAddress inetAddress = (InetSocketAddress) localAddress;
+
+                                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                                            "Server opened at address " + inetAddress.getHostString() + ":" + inetAddress.getPort()));
+                                }
+                            } catch (Throwable e) {
+                                log.log(Level.INFO, "an error occurred while server starting", e);
+                                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tmpServerStartingDialog,
+                                        arrayOf("An error occurred while server starting", e.getLocalizedMessage())));
+
+                                return;
+                            }
+
+                            remoteFrontend.set(tmpRemoteFrontend);
+                            SwingUtilities.invokeLater(() -> cancelButtonClicked(event));
+                        } finally {
+                            SwingUtilities.invokeLater(() -> tmpServerStartingDialog.setAllEnabled(true));
                         }
-
-                        final SocketAddress localAddress = channel.getLocalAddress();
-                        if (localAddress instanceof InetSocketAddress) {
-                            final InetSocketAddress inetAddress = (InetSocketAddress) localAddress;
-
-                            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(guiRenderer.mainWindow,
-                                    "Server opened at address " + inetAddress.getHostString() + ":" + inetAddress.getPort()));
-                        }
-                    } catch (Throwable e) {
-                        log.log(Level.INFO, "an error occurred while server starting", e);
-                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(serverStartingDialog,
-                                arrayOf("An error occurred while server starting", e.getLocalizedMessage())));
-
-                        continue;
-                    }
-
-                    remoteFrontend = tmpRemoteFrontend;
+                    }).start();
                 }
 
-                if (action instanceof IpAddressDialog.Action.Ok || action instanceof IpAddressDialog.Action.Cancel) {
-                    exec = true;
+                @Override
+                public void cancelButtonClicked(IpAddressDialog.Event event) {
+                    tmpServerStartingDialog.setVisible(false);
+                    exec.set(true);
                 }
+            });
 
-                serverStartingDialog.stop();
-            } finally {
-                serverStartingDialog.completeAction();
-            }
+            tmpServerStartingDialog.setVisible(true);
+            serverStartingDialog.set(tmpServerStartingDialog);
+        });
+
+        IpAddressDialog tmpServerStartingDialog;
+        while ((tmpServerStartingDialog = serverStartingDialog.get()) == null) {
+            Thread.yield();
         }
 
-        if (exec) {
+        while (tmpServerStartingDialog.isVisible()) {
+            Thread.yield();
+        }
+
+        if (exec.get()) {
             guiFrontend.exec();
 
-            if (remoteFrontend != null) {
-                remoteFrontend.stop();
+            if (remoteFrontend.get() != null) {
+                remoteFrontend.get().stop();
             }
         }
 
