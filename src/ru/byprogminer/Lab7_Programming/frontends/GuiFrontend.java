@@ -1,10 +1,13 @@
 package ru.byprogminer.Lab7_Programming.frontends;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
+import ru.byprogminer.Lab5_Programming.csv.CsvReader;
+import ru.byprogminer.Lab5_Programming.csv.CsvReaderWithHeader;
 import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.*;
 import ru.byprogminer.Lab7_Programming.controllers.CollectionController;
 import ru.byprogminer.Lab7_Programming.controllers.UsersController;
+import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab7_Programming.views.CheckPasswordView;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
@@ -13,6 +16,8 @@ import ru.byprogminer.Lab8_Programming.gui.UserDialog;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GuiFrontend implements Frontend, MainWindow.Listener {
@@ -56,17 +61,53 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
     @Override
     public void mainFileLoadMenuItemClicked(MainWindow.Event event) {
-        // TODO
+        new Thread(() -> {
+            final JFileChooser fileChooser = new JFileChooser("Load from file");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+            if (fileChooser.showOpenDialog(event.window) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+        }).start();
     }
 
     @Override
     public void mainFileSaveMenuItemClicked(MainWindow.Event event) {
-        // TODO
+        new Thread(() -> {
+            final JFileChooser fileChooser = new JFileChooser("Save to file");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+            if (fileChooser.showSaveDialog(event.window) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+        }).start();
     }
 
     @Override
     public void mainFileImportMenuItemClicked(MainWindow.Event event) {
-        // TODO
+        new Thread(() -> {
+            final JFileChooser fileChooser = new JFileChooser("Import from file");
+            fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+            if (fileChooser.showOpenDialog(event.window) != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            final Scanner scanner;
+
+            try {
+                scanner = new Scanner(fileChooser.getSelectedFile());
+            } catch (FileNotFoundException e) {
+                throw new IllegalArgumentException("file not found", e);
+            }
+
+            renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
+                    new CsvReader(scanner))).getObjects(), currentUser.get()));
+        }).start();
     }
 
     @Override

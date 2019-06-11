@@ -125,7 +125,7 @@ public class CollectionController {
                 final SortedSet<LivingObject> livingObjects = new TreeSet<>(collectionModel.get());
                 livingObjects.forEach(throwing().consumer(writer::write));
 
-                // TODO add to living object writer users
+                // TODO add users to living object writer
 
                 writer.flush();
                 return new SaveView(filename);
@@ -141,7 +141,7 @@ public class CollectionController {
                 final LivingObjectReader reader = new CsvLivingObjectReader(new CsvReaderWithHeader(
                         new CsvReader(new Scanner(new File(filename)))));
 
-                // TODO add to living object reader users
+                // TODO add users to living object reader
                 final Map<LivingObject, String> livingObjects = new HashMap<>();
                 for (LivingObject livingObject : reader.getObjects()) {
                     livingObjects.put(livingObject, null);
