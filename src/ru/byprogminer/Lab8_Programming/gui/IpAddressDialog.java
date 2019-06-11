@@ -148,7 +148,6 @@ public class IpAddressDialog extends JDialog {
         setLocationRelativeTo(parentWindow);
         pack();
 
-        addressTextField.requestFocus();
         setMinimumSize(getSize());
     }
 

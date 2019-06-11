@@ -3,6 +3,7 @@ package ru.byprogminer.Lab7_Programming.renderers;
 import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.views.*;
+import ru.byprogminer.Lab8_Programming.gui.CollectionInfoDialog;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
 import javax.swing.*;
@@ -45,7 +46,10 @@ public class GuiRenderer implements Renderer {
         if (view instanceof InfoView) {
             final InfoView infoView = (InfoView) view;
 
-            // TODO
+            SwingUtilities.invokeLater(() -> {
+                final CollectionInfoDialog dialog = new CollectionInfoDialog(mainWindow, "Collection info", infoView.metadata);
+                dialog.setVisible(true);
+            });
 
             return;
         }

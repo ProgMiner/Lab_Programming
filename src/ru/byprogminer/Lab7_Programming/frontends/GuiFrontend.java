@@ -136,7 +136,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
     @Override
     public void infoButtonClicked(MainWindow.Event event) {
-        // TODO
+        new Thread(() -> renderer.render(collectionController.info())).start();
     }
 
     @Override
