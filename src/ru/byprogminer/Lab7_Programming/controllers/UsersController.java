@@ -40,6 +40,10 @@ public class UsersController {
         this.usersModel = usersModel;
     }
 
+    public View checkPassword(Credentials credentials) {
+        return authorizedTemplate(credentials, () -> new CheckPasswordView(true));
+    }
+
     public View changePassword(String password, Credentials credentials) {
         final Set<String> permissions = setOf("users.changePassword.own");
 
@@ -49,8 +53,8 @@ public class UsersController {
 
         return permissionTemplate(credentials, permissions, () -> {
             try {
-                return new ChangePasswordView(usersModel.setPassword(Objects.
-                        requireNonNull(credentials).username, password));
+                return new ChangePasswordView(usersModel.setPassword(Objects
+                        .requireNonNull(credentials).username, password));
             } catch (Throwable e) {
                 return new ChangePasswordView(e.getLocalizedMessage());
             }

@@ -226,17 +226,17 @@ public class ServerMain {
             CollectionController collectionController
     ) {
         final MainWindow mainWindow = new MainWindow(APP_NAME);
-        final Frontend guiFrontend = new GuiFrontend(mainWindow);
+        final Frontend guiFrontend = new GuiFrontend(mainWindow, collectionController, usersController);
         final AtomicReference<Frontend> remoteFrontend = new AtomicReference<>();
         final AtomicBoolean exec = new AtomicBoolean();
 
-        final AtomicReference<IpAddressDialog> serverStartingDialog = new AtomicReference<>();
+        final AtomicReference<IpAddressDialog> serverStartingDialogReference = new AtomicReference<>();
         SwingUtilities.invokeLater(() -> {
-            final IpAddressDialog tmpServerStartingDialog = new IpAddressDialog(mainWindow, APP_NAME,
-                    IpAddressDialog.Kind.SERVER_STARTING, (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
+            final IpAddressDialog serverStartingDialog = new IpAddressDialog(mainWindow, APP_NAME, IpAddressDialog
+                    .Kind.SERVER_STARTING, "0.0.0.0", (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
 
-            tmpServerStartingDialog.setLocationRelativeTo(null);
-            tmpServerStartingDialog.addListener(new IpAddressDialog.Listener() {
+            serverStartingDialog.setLocationRelativeTo(null);
+            serverStartingDialog.addListener(new IpAddressDialog.Listener() {
 
                 @Override
                 public void okButtonClicked(IpAddressDialog.Event event) {
@@ -288,19 +288,21 @@ public class ServerMain {
                 public void cancelButtonClicked(IpAddressDialog.Event event) {
                     event.dialog.setVisible(false);
                     exec.set(true);
+
+                    event.dialog.dispose();
                 }
             });
 
-            tmpServerStartingDialog.setVisible(true);
-            serverStartingDialog.set(tmpServerStartingDialog);
+            serverStartingDialog.setVisible(true);
+            serverStartingDialogReference.set(serverStartingDialog);
         });
 
-        IpAddressDialog tmpServerStartingDialog;
-        while ((tmpServerStartingDialog = serverStartingDialog.get()) == null) {
+        IpAddressDialog serverStartingDialog;
+        while ((serverStartingDialog = serverStartingDialogReference.get()) == null) {
             Thread.yield();
         }
 
-        while (tmpServerStartingDialog.isVisible()) {
+        while (serverStartingDialog.isVisible()) {
             Thread.yield();
         }
 

@@ -228,7 +228,7 @@ public class DatabaseCollectionModel implements CollectionModel {
                 "   OR (z = ?\n" +
                 "  AND (lives < ?\n" +
                 "   OR (lives = ?\n" +
-                "  AND ((SELECT volume FROM items_metrics WHERE items = items) < ?\n" +
+                "  AND ((SELECT volume FROM items_metrics WHERE items = \"%1$s\".items) < ?\n" +
                 "      )))))))))))))))";
 
         private static final String REMOVE_GREATER = "" +
@@ -252,7 +252,7 @@ public class DatabaseCollectionModel implements CollectionModel {
                 "   OR (z = ?\n" +
                 "  AND (lives > ?\n" +
                 "   OR (lives = ?\n" +
-                "  AND ((SELECT volume FROM items_metrics WHERE items = items) > ?\n" +
+                "  AND ((SELECT volume FROM items_metrics WHERE items = \"%1$s\".items) > ?\n" +
                 "      )))))))))))))))";
 
         private static final String REMOVE_NOBODY_OWNED = "" +

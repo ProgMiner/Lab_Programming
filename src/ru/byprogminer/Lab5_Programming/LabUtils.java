@@ -55,33 +55,8 @@ public final class LabUtils {
             callIfNotNull(map.get("volume"), s -> object.setVolume(Double.parseDouble(s)));
 
             cause = "object's creating time has bad format";
-            throwing().unwrap(Exception.class, () -> callIfNotNull(map.get("creatingTime"), throwing().consumer(s -> {
-                LocalDateTime creatingTime = null;
-                Exception exception = null;
-
-                try {
-                    creatingTime = LocalDateTime.parse(s, Object.DATE_TIME_FORMATTER);
-                } catch (Exception e) {
-                    exception = e;
-                }
-
-                if (creatingTime == null) {
-                    try {
-                        creatingTime = LocalDateTime.parse(s);
-                    } catch (Throwable ignored) {}
-                }
-
-                if (creatingTime == null) {
-                    try {
-                        creatingTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(s)), ZoneId.systemDefault());
-                    } catch (Throwable ignored) {}
-                }
-
-                callIfNotNull(creatingTime, object::setCreatingTime);
-                if (creatingTime == null) {
-                    throw exception;
-                }
-            })));
+            throwing().unwrap(Exception.class, () -> callIfNotNull(map.get("creatingTime"), throwing()
+                    .consumer(s -> object.setCreatingTime(parseLocalDateTime(s)))));
 
             cause = "object's x has bad format";
             callIfNotNull(map.get("x"), s -> object.setX(Double.parseDouble(s)));
@@ -97,6 +72,40 @@ public final class LabUtils {
             log.log(Level.WARNING, cause, e);
             throw exceptionConstructor.apply(cause, e);
         }
+    }
+
+    public static LocalDateTime parseLocalDateTime(String string) throws Exception {
+        if (string == null || string.trim().isEmpty()) {
+            return LocalDateTime.now();
+        }
+
+        LocalDateTime localDateTime = null;
+        Exception exception = null;
+
+        try {
+            localDateTime = LocalDateTime.parse(string, Object.DATE_TIME_FORMATTER);
+        } catch (Exception e) {
+            exception = e;
+        }
+
+        if (localDateTime == null) {
+            try {
+                localDateTime = LocalDateTime.parse(string);
+            } catch (Throwable ignored) {}
+        }
+
+        if (localDateTime == null) {
+            try {
+                localDateTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long
+                        .parseLong(string)), ZoneId.systemDefault());
+            } catch (Throwable ignored) {}
+        }
+
+        if (localDateTime == null) {
+            throw exception;
+        }
+
+        return localDateTime;
     }
 
     public static void setLivingObjectLives(final LivingObject object, final Boolean lives) {

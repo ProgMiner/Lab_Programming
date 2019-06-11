@@ -1,5 +1,7 @@
 package ru.byprogminer.Lab8_Programming.gui;
 
+import ru.byprogminer.Lab3_Programming.LivingObject;
+
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
 import java.awt.*;
@@ -34,15 +36,18 @@ public class MainWindow extends JFrame {
 
         public final MainWindow window;
         public final String language;
+        public final LivingObject selectedElement;
 
-        private Event(MainWindow window, String language) {
+        private Event(MainWindow window, String language, LivingObject selectedElement) {
             this.window = window;
             this.language = language;
+            this.selectedElement = selectedElement;
         }
     }
 
+    private static final int MARGIN = 5;
+
     private final String name;
-    private final int margin = 5;
 
     private final JMenuBar mainMenuBar = new JMenuBar();
     private final JMenu mainFileMenu = new JMenu("File");
@@ -63,7 +68,7 @@ public class MainWindow extends JFrame {
     private final JPanel userNotLoggedPanel = new JPanel(new GridBagLayout());
     private final JButton userNotLoggedLoginButton = new JButton("Login");
     private final JPanel userLoggedInPanel = new JPanel(new GridLayout(1, 1));
-    private final JPanel userLoggedInCurrentUserPanel = new JPanel(new GridLayout(2, 1, margin, margin));
+    private final JPanel userLoggedInCurrentUserPanel = new JPanel(new GridBagLayout());
     private final String userLoggedInCurrentUserUsernameText = "Current user: ";
     private final JLabel userLoggedInCurrentUserUsernameLabel = new JLabel(userLoggedInCurrentUserUsernameText);
     private final JButton userLoggedInCurrentUserLogoutButton = new JButton("Logout");
@@ -127,55 +132,55 @@ public class MainWindow extends JFrame {
         mapListListTable.setFont(GuiUtils.DEFAULT_FONT);
         mapListTabbedPane.add(mapListListTable, "List");
         mapListTabbedPane.setFont(GuiUtils.DEFAULT_FONT);
-        contentPanePanel.add(mapListTabbedPane, new GridBagConstraints(0, 0, 1, 7, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, margin), 0, 0));
+        contentPanePanel.add(mapListTabbedPane, new GridBagConstraints(0, 0, 1, 7, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, MARGIN), 0, 0));
 
         userNotLoggedLoginButton.addActionListener(actionEvent -> sendEvent(Listener::userNotLoggedLoginButtonClicked));
         userNotLoggedLoginButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         userNotLoggedLoginButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
-        userNotLoggedPanel.add(userNotLoggedLoginButton, new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        userNotLoggedPanel.add(userNotLoggedLoginButton, new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
         userNotLoggedPanel.add(new JSeparator(SwingConstants.HORIZONTAL), new GridBagConstraints(0, 1, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
         userPanel.add(userNotLoggedPanel);
 
         userLoggedInCurrentUserUsernameLabel.setFont(GuiUtils.DEFAULT_FONT);
         userLoggedInCurrentUserUsernameLabel.setBorder(GuiUtils.DEFAULT_MARGIN_BORDER);
-        userLoggedInCurrentUserPanel.add(userLoggedInCurrentUserUsernameLabel);
+        userLoggedInCurrentUserPanel.add(userLoggedInCurrentUserUsernameLabel, new GridBagConstraints(0, 0, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         userLoggedInCurrentUserLogoutButton.addActionListener(actionEvent -> sendEvent(Listener::userLoggedInCurrentUserLogoutButtonClicked));
         userLoggedInCurrentUserLogoutButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         userLoggedInCurrentUserLogoutButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
-        userLoggedInCurrentUserPanel.add(userLoggedInCurrentUserLogoutButton);
-        userLoggedInCurrentUserPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.
-                createEtchedBorder(EtchedBorder.LOWERED), BorderFactory.createEmptyBorder(0, margin, margin, margin)));
+        userLoggedInCurrentUserPanel.add(userLoggedInCurrentUserLogoutButton, new GridBagConstraints(0, 1, 1, 1, 1, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
+        userLoggedInCurrentUserPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory
+                .createEtchedBorder(EtchedBorder.LOWERED), BorderFactory.createEmptyBorder(0, MARGIN, MARGIN, MARGIN)));
         userLoggedInPanel.add(userLoggedInCurrentUserPanel);
-        contentPanePanel.add(userPanel, new GridBagConstraints(1, 0, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPanePanel.add(userPanel, new GridBagConstraints(1, 0, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         infoButton.addActionListener(actionEvent -> sendEvent(Listener::infoButtonClicked));
         infoButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         infoButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
         infoButton.setPreferredSize(infoButton.getMaximumSize());
-        contentPanePanel.add(infoButton, new GridBagConstraints(1, 1, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPanePanel.add(infoButton, new GridBagConstraints(1, 1, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         addButton.addActionListener(actionEvent -> sendEvent(Listener::addButtonClicked));
         addButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         addButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
-        contentPanePanel.add(addButton, new GridBagConstraints(1, 2, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPanePanel.add(addButton, new GridBagConstraints(1, 2, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         removeButton.addActionListener(actionEvent -> sendEvent(Listener::removeButtonClicked));
         removeButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         removeButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
-        contentPanePanel.add(removeButton, new GridBagConstraints(1, 3, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPanePanel.add(removeButton, new GridBagConstraints(1, 3, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         removeLowerButton.addActionListener(actionEvent -> sendEvent(Listener::removeLowerButtonClicked));
         removeLowerButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         removeLowerButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
-        contentPanePanel.add(removeLowerButton, new GridBagConstraints(1, 4, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPanePanel.add(removeLowerButton, new GridBagConstraints(1, 4, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
         removeGreaterButton.addActionListener(actionEvent -> sendEvent(Listener::removeGreaterButtonClicked));
         removeGreaterButton.setFont(GuiUtils.DEFAULT_BUTTON_FONT);
         removeGreaterButton.setMargin(GuiUtils.DEFAULT_BUTTON_MARGIN);
         contentPanePanel.add(removeGreaterButton, new GridBagConstraints(1, 5, 1, 1, 0, 0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
         contentPanePanel.add(Box.createVerticalGlue(), new GridBagConstraints(1, 6, 1, 1, 0, 1, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
-        contentPanePanel.setBorder(BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+        contentPanePanel.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
         setContentPane(contentPanePanel);
         setMinimumSize(new Dimension(850, 630));
         setLocationRelativeTo(null);
@@ -239,7 +244,7 @@ public class MainWindow extends JFrame {
     private void sendEvent(BiConsumer<Listener, Event> handler) {
         final ButtonModel selection = mainLanguageButtonGroup.getSelection();
 
-        sendEvent(handler, new Event(this, selection == null ? "" : selection.getActionCommand()));
+        sendEvent(handler, new Event(this, selection == null ? "" : selection.getActionCommand(), null));
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler, Event event) {

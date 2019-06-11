@@ -31,9 +31,9 @@ public class UserDialog extends JDialog {
 
         private Event(UserDialog dialog, String username, String email, char[] password) {
             this.dialog = Objects.requireNonNull(dialog);
-            this.username = Objects.requireNonNull(username);
-            this.email = Objects.requireNonNull(email);
-            this.password = Objects.requireNonNull(password);
+            this.username = username;
+            this.email = email;
+            this.password = password;
         }
     }
 
@@ -138,7 +138,7 @@ public class UserDialog extends JDialog {
             cancelButton.setText(kind.cancelText);
             cancelButton.setFont(DEFAULT_BUTTON_FONT);
             cancelButton.setMargin(DEFAULT_BUTTON_MARGIN);
-            cancelButton.addActionListener(actionEvent -> sendEvent(Listener::cancelButtonClicked));
+            cancelButton.addActionListener(actionEvent -> sendEvent(Listener::cancelButtonClicked, new Event(this, null, null, null)));
             contentPane.add(cancelButton, new GridBagConstraints(0, row, 2, 1, 1, 0, CENTER, HORIZONTAL, new Insets(0, 0, 0, 0), 0, 0));
             ++row;
         }
@@ -162,7 +162,7 @@ public class UserDialog extends JDialog {
 
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                sendEvent(Listener::cancelButtonClicked);
+                sendEvent(Listener::cancelButtonClicked, new Event(UserDialog.this, null, null, null));
             }
         });
         setLocationRelativeTo(parentWindow);
