@@ -92,6 +92,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
                     // TODO check password
 
+                    previousUser = userDialogEvent.username;
                     SwingUtilities.invokeLater(() -> {
                         event.window.setCurrentUser(userDialogEvent.username);
                         userDialogEvent.dialog.setVisible(false);

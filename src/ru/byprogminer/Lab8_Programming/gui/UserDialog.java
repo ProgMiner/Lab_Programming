@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
@@ -29,10 +30,10 @@ public class UserDialog extends JDialog {
         public final char[] password;
 
         private Event(UserDialog dialog, String username, String email, char[] password) {
-            this.dialog = dialog;
-            this.username = username;
-            this.email = email;
-            this.password = password;
+            this.dialog = Objects.requireNonNull(dialog);
+            this.username = Objects.requireNonNull(username);
+            this.email = Objects.requireNonNull(email);
+            this.password = Objects.requireNonNull(password);
         }
     }
 
@@ -53,7 +54,7 @@ public class UserDialog extends JDialog {
         public Kind(String okText, String cancelText, Field... fields) {
             this.okText = okText;
             this.cancelText = cancelText;
-            this.fields = fields;
+            this.fields = Objects.requireNonNull(fields);
         }
 
         public Kind(String okText, String cancelText) {
@@ -63,8 +64,7 @@ public class UserDialog extends JDialog {
 
     private static final String ENTER_ACTION = "enter";
     private static final String ESCAPE_ACTION = "escape";
-
-    private final int margin = 5;
+    private static final int MARGIN = 5;
 
     private final JPanel contentPane = new JPanel(new GridBagLayout());
     private final JLabel usernameLabel = new JLabel("Username:", JLabel.RIGHT);
@@ -89,12 +89,12 @@ public class UserDialog extends JDialog {
         if (containsRef(kind.fields, Kind.Field.USERNAME)) {
             usernameLabel.setFont(DEFAULT_FONT);
             usernameLabel.setBorder(DEFAULT_MARGIN_BORDER);
-            contentPane.add(usernameLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
+            contentPane.add(usernameLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
             usernameTextField.setFont(DEFAULT_FONT);
             usernameTextField.setText(initialUsername);
             usernameTextField.setMargin(DEFAULT_MARGIN);
-            contentPane.add(usernameTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+            contentPane.add(usernameTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
             ++row;
         }
@@ -102,11 +102,11 @@ public class UserDialog extends JDialog {
         if (containsRef(kind.fields, Kind.Field.EMAIL)) {
             emailLabel.setFont(DEFAULT_FONT);
             emailLabel.setBorder(DEFAULT_MARGIN_BORDER);
-            contentPane.add(emailLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
+            contentPane.add(emailLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
             emailTextField.setFont(DEFAULT_FONT);
             emailTextField.setMargin(DEFAULT_MARGIN);
-            contentPane.add(emailTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+            contentPane.add(emailTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
             ++row;
         }
@@ -114,11 +114,11 @@ public class UserDialog extends JDialog {
         if (containsRef(kind.fields, Kind.Field.PASSWORD)) {
             passwordLabel.setFont(DEFAULT_FONT);
             passwordLabel.setBorder(DEFAULT_MARGIN_BORDER);
-            contentPane.add(passwordLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
+            contentPane.add(passwordLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
             passwordPasswordField.setFont(DEFAULT_FONT);
             passwordPasswordField.setMargin(DEFAULT_MARGIN);
-            contentPane.add(passwordPasswordField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+            contentPane.add(passwordPasswordField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
 
             ++row;
         }
@@ -130,7 +130,7 @@ public class UserDialog extends JDialog {
             okButton.setFont(DEFAULT_BUTTON_FONT);
             okButton.setMargin(DEFAULT_BUTTON_MARGIN);
             okButton.addActionListener(actionEvent -> sendEvent(Listener::okButtonClicked));
-            contentPane.add(okButton, new GridBagConstraints(0, row, 2, 1, 1, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+            contentPane.add(okButton, new GridBagConstraints(0, row, 2, 1, 1, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
             ++row;
         }
 
@@ -143,7 +143,7 @@ public class UserDialog extends JDialog {
             ++row;
         }
 
-        contentPane.setBorder(BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+        contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
         setContentPane(contentPane);
 
         final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);

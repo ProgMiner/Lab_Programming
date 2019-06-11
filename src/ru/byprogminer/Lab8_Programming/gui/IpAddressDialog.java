@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 
@@ -28,8 +29,8 @@ public class IpAddressDialog extends JDialog {
         public final int port;
 
         private Event(IpAddressDialog dialog, String address, int port) {
-            this.dialog = dialog;
-            this.address = address;
+            this.dialog = Objects.requireNonNull(dialog);
+            this.address = Objects.requireNonNull(address);
             this.port = port;
         }
     }
@@ -50,8 +51,7 @@ public class IpAddressDialog extends JDialog {
 
     private static final String ENTER_ACTION = "enter";
     private static final String ESCAPE_ACTION = "escape";
-
-    private final int margin = 5;
+    private static final int MARGIN = 5;
 
     private final JPanel contentPane = new JPanel(new GridBagLayout());
     private final JLabel addressLabel = new JLabel("Address:", JLabel.RIGHT);
@@ -73,16 +73,16 @@ public class IpAddressDialog extends JDialog {
         int row = 0;
         addressLabel.setFont(DEFAULT_FONT);
         addressLabel.setBorder(DEFAULT_MARGIN_BORDER);
-        contentPane.add(addressLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
+        contentPane.add(addressLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
         addressTextField.setFont(DEFAULT_FONT);
         addressTextField.setMargin(DEFAULT_MARGIN);
-        contentPane.add(addressTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPane.add(addressTextField, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
         ++row;
 
         portLabel.setFont(DEFAULT_FONT);
         portLabel.setBorder(DEFAULT_MARGIN_BORDER);
-        contentPane.add(portLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, margin), 0, 0));
+        contentPane.add(portLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
         final JSpinner.DefaultEditor portSpinnerEditor = (JSpinner.DefaultEditor) portSpinner.getEditor();
 
@@ -91,7 +91,7 @@ public class IpAddressDialog extends JDialog {
 
         portSpinner.setFont(DEFAULT_FONT);
         portSpinner.getModel().setValue(initialPort);
-        contentPane.add(portSpinner, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+        contentPane.add(portSpinner, new GridBagConstraints(1, row, 1, 1, 3, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
         ++row;
 
         contentPane.add(Box.createVerticalGlue(), new GridBagConstraints(0, row, 2, 1, 1, 1, CENTER, BOTH, new Insets(0, 0, 0, 0), 0, 0));
@@ -102,7 +102,7 @@ public class IpAddressDialog extends JDialog {
             okButton.setFont(DEFAULT_BUTTON_FONT);
             okButton.setMargin(DEFAULT_BUTTON_MARGIN);
             okButton.addActionListener(actionEvent -> sendEvent(Listener::okButtonClicked));
-            contentPane.add(okButton, new GridBagConstraints(0, row, 2, 1, 1, 0, CENTER, HORIZONTAL, new Insets(0, 0, margin, 0), 0, 0));
+            contentPane.add(okButton, new GridBagConstraints(0, row, 2, 1, 1, 0, CENTER, HORIZONTAL, new Insets(0, 0, MARGIN, 0), 0, 0));
             ++row;
         }
 
@@ -115,7 +115,7 @@ public class IpAddressDialog extends JDialog {
             ++row;
         }
 
-        contentPane.setBorder(BorderFactory.createEmptyBorder(margin, margin, margin, margin));
+        contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
 
         final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ENTER_ACTION);
