@@ -10,8 +10,8 @@
         - [ ] Items window
       - [ ] Login
         - [ ] Password checking packet
-        - [ ] Login window
-      - [ ] Collection information window
+        - [X] Login window
+      - [X] Collection information window
       - [ ] Element window
     - [ ] Users management (removing/etc)
       - [ ] Users removing

@@ -25,7 +25,7 @@ public class CollectionInfoDialog extends JDialog {
         }
     };
     private final JTable metadataTable = new JTable(metadataTableModel);
-    private final JScrollPane listScrollPane = new JScrollPane(metadataTable);
+    private final JScrollPane metadataScrollPane = new JScrollPane(metadataTable);
 
     public CollectionInfoDialog(Window parentWindow, String name, Map<String, String> metadata) {
         this(parentWindow, name, ModalityType.DOCUMENT_MODAL, metadata);
@@ -34,13 +34,14 @@ public class CollectionInfoDialog extends JDialog {
     public CollectionInfoDialog(Window parentWindow, String name, ModalityType modalityType, Map<String, String> metadata) {
         super(parentWindow, name, modalityType);
 
+        GuiUtils.configureDefaultJTable(metadataTable, metadataScrollPane);
         metadataTableModel.addColumn("Key");
         metadataTableModel.addColumn("Value");
         for (Map.Entry<String, String> entry : metadata.entrySet()) {
             metadataTableModel.addRow(arrayOf(entry.getKey(), entry.getValue()));
         }
-        metadataTable.setFont(GuiUtils.DEFAULT_FONT);
-        contentPane.add(listScrollPane);
+        metadataTable.setAutoCreateRowSorter(true);
+        contentPane.add(metadataScrollPane);
         contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
 
         final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);

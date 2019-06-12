@@ -41,6 +41,10 @@ public class GuiUtils {
         }
     }
 
+    public static Border createMarginBorder(Insets margin) {
+        return createMarginBorder(margin, BorderFactory::createEmptyBorder);
+    }
+
     public static Border createMarginBorder(Insets margin, BorderFactoryMethod factoryMethod) {
         return factoryMethod.createBorder(margin.top, margin.right, margin.bottom, margin.left);
     }
@@ -51,5 +55,27 @@ public class GuiUtils {
         }
 
         return name + " (" + currentUser + ")";
+    }
+
+    public static void configureDefaultJTable(JTable source, JScrollPane scrollPane) {
+        source.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        source.setFont(GuiUtils.DEFAULT_FONT);
+
+        final FontMetrics fontMetrics = source.getFontMetrics(DEFAULT_FONT);
+        final int rowHeight = fontMetrics.getHeight() + fontMetrics.getAscent() +
+                DEFAULT_BUTTON_MARGIN.top + DEFAULT_BUTTON_MARGIN.bottom;
+
+        source.setRowHeight(rowHeight);
+        source.getTableHeader().setFont(DEFAULT_BUTTON_FONT);
+        scrollPane.setColumnHeader(new JViewport() {
+
+            @Override
+            public Dimension getPreferredSize() {
+                final Dimension dimension = super.getPreferredSize();
+                dimension.height = rowHeight;
+
+                return dimension;
+            }
+        });
     }
 }
