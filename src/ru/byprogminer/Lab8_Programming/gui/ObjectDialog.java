@@ -312,7 +312,27 @@ public class ObjectDialog<T extends Object> extends JDialog {
     }
 
     private void itemsButtonClicked() {
-        // TODO items dialog
+        final ItemsDialog dialog = new ItemsDialog(this, "Specify items");
+
+        dialog.setItems(items);
+        dialog.addListener(new ItemsDialog.Listener() {
+
+            @Override
+            public void saveButtonClicked(ItemsDialog.Event event) {
+                items.clear();
+
+                items.addAll(event.items);
+                cancelButtonClicked(event);
+            }
+
+            @Override
+            public void cancelButtonClicked(ItemsDialog.Event event) {
+                event.dialog.setVisible(false);
+                event.dialog.dispose();
+            }
+        });
+
+        dialog.setVisible(true);
     }
 
     private Icon imageToIcon(BufferedImage image) {

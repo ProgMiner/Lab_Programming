@@ -17,7 +17,7 @@ public class CollectionInfoDialog extends JDialog {
     private static final int MARGIN = 5;
 
     private final JPanel contentPane = new JPanel(new GridLayout(1, 1));
-    private final DefaultTableModel metadataTableModel = new DefaultTableModel() {
+    private final DefaultTableModel metadataTableModel = new DefaultTableModel(arrayOf("Key", "Value"), 0) {
 
         @Override
         public boolean isCellEditable(int i, int i1) {
@@ -27,19 +27,14 @@ public class CollectionInfoDialog extends JDialog {
     private final JTable metadataTable = new JTable(metadataTableModel);
     private final JScrollPane metadataScrollPane = new JScrollPane(metadataTable);
 
-    public CollectionInfoDialog(Window parentWindow, String name, Map<String, String> metadata) {
-        this(parentWindow, name, ModalityType.DOCUMENT_MODAL, metadata);
+    public CollectionInfoDialog(Window parentWindow, String name) {
+        this(parentWindow, name, ModalityType.DOCUMENT_MODAL);
     }
 
-    public CollectionInfoDialog(Window parentWindow, String name, ModalityType modalityType, Map<String, String> metadata) {
+    public CollectionInfoDialog(Window parentWindow, String name, ModalityType modalityType) {
         super(parentWindow, name, modalityType);
 
         GuiUtils.configureDefaultJTable(metadataTable, metadataScrollPane);
-        metadataTableModel.addColumn("Key");
-        metadataTableModel.addColumn("Value");
-        for (Map.Entry<String, String> entry : metadata.entrySet()) {
-            metadataTableModel.addRow(arrayOf(entry.getKey(), entry.getValue()));
-        }
         metadataTable.setAutoCreateRowSorter(true);
         contentPane.add(metadataScrollPane);
         contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
@@ -60,5 +55,13 @@ public class CollectionInfoDialog extends JDialog {
         pack();
 
         setMinimumSize(getSize());
+    }
+
+    public void setMetadata(Map<String, String> metadata) {
+        metadataTableModel.setRowCount(0);
+
+        for (Map.Entry<String, String> entry : metadata.entrySet()) {
+            metadataTableModel.addRow(arrayOf(entry.getKey(), entry.getValue()));
+        }
     }
 }

@@ -47,7 +47,8 @@ public class GuiRenderer implements Renderer {
             final InfoView infoView = (InfoView) view;
 
             SwingUtilities.invokeLater(() -> {
-                final CollectionInfoDialog dialog = new CollectionInfoDialog(mainWindow, "Collection info", infoView.metadata);
+                final CollectionInfoDialog dialog = new CollectionInfoDialog(mainWindow, "Collection info");
+                dialog.setMetadata(infoView.metadata);
                 dialog.setVisible(true);
             });
 
