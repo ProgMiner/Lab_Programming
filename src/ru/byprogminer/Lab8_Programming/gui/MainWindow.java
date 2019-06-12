@@ -1,14 +1,28 @@
 package ru.byprogminer.Lab8_Programming.gui;
 
 import ru.byprogminer.Lab3_Programming.LivingObject;
+import ru.byprogminer.Lab3_Programming.Object;
+import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EtchedBorder;
+import javax.swing.event.TableModelEvent;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 @SuppressWarnings("FieldCanBeLocal")
 public class MainWindow extends JFrame {
@@ -22,6 +36,8 @@ public class MainWindow extends JFrame {
         void mainFileExitMenuItemClicked(Event event);
         void mainLanguageMenuItemClicked(Event event);
         void mainAboutMenuItemClicked(Event event);
+
+        void elementChanged(Event event);
 
         void userNotLoggedLoginButtonClicked(Event event);
         void userLoggedInCurrentUserLogoutButtonClicked(Event event);
@@ -37,15 +53,78 @@ public class MainWindow extends JFrame {
         public final MainWindow window;
         public final String language;
         public final LivingObject selectedElement;
+        public final LivingObject newElement;
 
-        private Event(MainWindow window, String language, LivingObject selectedElement) {
+        private Event(MainWindow window, String language, LivingObject selectedElement, LivingObject newElement) {
             this.window = window;
             this.language = language;
             this.selectedElement = selectedElement;
+            this.newElement = newElement;
+        }
+    }
+
+    private static class ItemsColumnContents {
+
+        public final Set<Object> items;
+
+        public ItemsColumnContents(Set<Object> items) {
+            this.items = Collections.unmodifiableSet(Objects.requireNonNull(items));
+        }
+
+        @Override
+        public String toString() {
+            return "Items...";
+        }
+    }
+
+    private static class ImageColumnContents implements Icon {
+
+        public final BufferedImage image;
+        public final ImageIcon icon;
+
+        public ImageColumnContents(BufferedImage image) {
+            this.image = Objects.requireNonNull(image);
+
+            icon = new ImageIcon(makeThumbnail(image, MAP_LIST_LIST_MAX_IMAGE_WIDTH, MAP_LIST_LIST_MAX_IMAGE_HEIGHT));
+        }
+
+        public static ImageColumnContents get(BufferedImage image) {
+            if (image == null) {
+                return null;
+            }
+
+            return new ImageColumnContents(image);
+        }
+
+        @Override
+        public void paintIcon(Component component, Graphics graphics, int i, int i1) {
+            icon.paintIcon(component, graphics, i, i1);
+        }
+
+        @Override
+        public int getIconWidth() {
+            return icon.getIconWidth();
+        }
+
+        @Override
+        public int getIconHeight() {
+            return icon.getIconHeight();
         }
     }
 
     private static final int MARGIN = 5;
+
+    private static final int MAP_LIST_LIST_NAME_COLUMN = 0;
+    private static final int MAP_LIST_LIST_VOLUME_COLUMN = 1;
+    private static final int MAP_LIST_LIST_CREATING_TIME_COLUMN = 2;
+    private static final int MAP_LIST_LIST_X_COLUMN = 3;
+    private static final int MAP_LIST_LIST_Y_COLUMN = 4;
+    private static final int MAP_LIST_LIST_Z_COLUMN = 5;
+    private static final int MAP_LIST_LIST_LIVES_COLUMN = 6;
+    private static final int MAP_LIST_LIST_ITEMS_COLUMN = 7;
+    private static final int MAP_LIST_LIST_IMAGE_COLUMN = 8;
+    private static final int MAP_LIST_LIST_MAX_IMAGE_WIDTH = 50;
+    private static final int MAP_LIST_LIST_MAX_IMAGE_HEIGHT = 20;
 
     private final String name;
 
@@ -63,7 +142,27 @@ public class MainWindow extends JFrame {
     private final JPanel contentPanePanel = new JPanel(new GridBagLayout());
     private final JTabbedPane mapListTabbedPane = new JTabbedPane();
     private final ElementsMap mapListMapElementsMap = new ElementsMap();
-    private final JTable mapListListTable = new JTable();
+    private final DefaultTableModel mapListListTableModel =
+            new DefaultTableModel(arrayOf("Name", "Volume", "Creating time", "X", "Y", "Z", "Lives", "Items", "Image"), 0);
+    private final JTable mapListListTable = new JTable(mapListListTableModel) {
+
+        @Override
+        public Class<?> getColumnClass(int col) {
+            if (getRowCount() == 0) {
+                return super.getColumnClass(col);
+            }
+
+            final java.lang.Object value = getValueAt(0, col);
+            if (value == null) {
+                return super.getColumnClass(col);
+            } else {
+                return value.getClass();
+            }
+        }
+    };
+    private final ButtonColumn mapListListItemsButtonColumn = new ButtonColumn(mapListListTable);
+    private final ButtonColumn mapListListImageButtonColumn = new ButtonColumn(mapListListTable);
+    private final JScrollPane mapListListScrollPane = new JScrollPane(mapListListTable);
     private final JPanel userPanel = new JPanel(new GridLayout(1, 1));
     private final JPanel userNotLoggedPanel = new JPanel(new GridBagLayout());
     private final JButton userNotLoggedLoginButton = new JButton("Login");
@@ -79,7 +178,13 @@ public class MainWindow extends JFrame {
     private final JButton removeGreaterButton = new JButton("Remove greater elements");
 
     private final Set<Listener> listeners = new HashSet<>();
+    private final AtomicBoolean programmaticallyMapListListTableChange = new AtomicBoolean();
+    private final Map<LivingObject, Integer> elementsListIndexes = new HashMap<>();
+    private final Map<Integer, LivingObject> listElements = new HashMap<>();
+    private LivingObject selectedElement = null;
     private boolean userLoggedIn = false;
+
+    private final Logger log = Loggers.getObjectLogger(this);
 
     public MainWindow(String name) {
         super(name);
@@ -129,8 +234,43 @@ public class MainWindow extends JFrame {
         mapListMapElementsMap.setFont(GuiUtils.DEFAULT_FONT);
         mapListTabbedPane.add(mapListMapElementsMap, "Map");
 
-        mapListListTable.setFont(GuiUtils.DEFAULT_FONT);
-        mapListTabbedPane.add(mapListListTable, "List");
+        programmaticallyMapListListTableChange.set(true);
+        GuiUtils.configureDefaultJTable(mapListListTable, mapListListScrollPane);
+        mapListListTableModel.addTableModelListener(this::mapListListTableModelTableChanged);
+
+        final TableColumnModel mapListListTableColumnModel = mapListListTable.getColumnModel();
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_NAME_COLUMN).setMinWidth(100);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_NAME_COLUMN).setPreferredWidth(120);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_VOLUME_COLUMN).setMinWidth(60);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_CREATING_TIME_COLUMN).setMinWidth(145);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_X_COLUMN).setMinWidth(25);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_Y_COLUMN).setMinWidth(25);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_Z_COLUMN).setMinWidth(25);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_LIVES_COLUMN).setMinWidth(45);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_LIVES_COLUMN).setMaxWidth(45);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_ITEMS_COLUMN).setMinWidth(75);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_ITEMS_COLUMN).setMaxWidth(75);
+        mapListListTableColumnModel.getColumn(MAP_LIST_LIST_IMAGE_COLUMN).setMinWidth(50);
+
+        mapListListItemsButtonColumn.getEditorButton().setMargin(GuiUtils.DEFAULT_MARGIN);
+        mapListListItemsButtonColumn.getRendererButton().setMargin(GuiUtils.DEFAULT_MARGIN);
+        mapListListItemsButtonColumn.getEditorButton().setFont(GuiUtils.DEFAULT_BUTTON_FONT);
+        mapListListItemsButtonColumn.getRendererButton().setFont(GuiUtils.DEFAULT_BUTTON_FONT);
+        mapListListItemsButtonColumn.addActionListener(actionEvent ->
+                mapListListTableItemsButtonColumnClicked(Integer.parseInt(actionEvent.getActionCommand())));
+        mapListListItemsButtonColumn.setup(MAP_LIST_LIST_ITEMS_COLUMN);
+
+        mapListListImageButtonColumn.getEditorButton().setMargin(GuiUtils.DEFAULT_MARGIN);
+        mapListListImageButtonColumn.getRendererButton().setMargin(GuiUtils.DEFAULT_MARGIN);
+        mapListListImageButtonColumn.getEditorButton().setFont(GuiUtils.DEFAULT_BUTTON_FONT);
+        mapListListImageButtonColumn.getRendererButton().setFont(GuiUtils.DEFAULT_BUTTON_FONT);
+        mapListListImageButtonColumn.addActionListener(actionEvent ->
+                mapListListTableImageButtonColumnClicked(Integer.parseInt(actionEvent.getActionCommand())));
+        mapListListImageButtonColumn.setup(MAP_LIST_LIST_IMAGE_COLUMN);
+        mapListListTable.getSelectionModel().addListSelectionListener(listSelectionEvent -> mapListListTableSelectionModelValueChanged());
+        mapListListTable.doLayout();
+        programmaticallyMapListListTableChange.set(false);
+        mapListTabbedPane.add(mapListListScrollPane, "List");
         mapListTabbedPane.setFont(GuiUtils.DEFAULT_FONT);
         contentPanePanel.add(mapListTabbedPane, new GridBagConstraints(0, 0, 1, 7, 1, 1, GridBagConstraints.CENTER, GridBagConstraints.BOTH, new Insets(0, 0, 0, MARGIN), 0, 0));
 
@@ -241,10 +381,210 @@ public class MainWindow extends JFrame {
         listeners.remove(listener);
     }
 
+    public void setElements(Set<LivingObject> elements) {
+        deselectElement();
+
+        // TODO update map
+
+        listElements.clear();
+        elementsListIndexes.clear();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTableModel.setRowCount(0);
+        for (LivingObject element : elements) {
+            addListRow(element);
+        }
+        programmaticallyMapListListTableChange.set(false);
+    }
+
+    private void mapListListTableSelectionModelValueChanged() {
+        final int selection = mapListListTable.getSelectionModel().getMinSelectionIndex();
+
+        if (selection != -1) {
+            selectElement(selection);
+        }
+    }
+
+    private void mapListListTableModelTableChanged(TableModelEvent tableModelEvent) {
+        if (programmaticallyMapListListTableChange.get()) {
+            return;
+        }
+
+        final int row = tableModelEvent.getFirstRow();
+        final LivingObject element = listElements.get(row);
+        if (tableModelEvent.getType() == TableModelEvent.UPDATE) {
+            try {
+                final LivingObject newElement = getElementFromRow(row);
+
+                changeElement(element, newElement);
+                sendEvent(Listener::elementChanged, element, newElement);
+            } catch (Throwable e) {
+                log.log(Level.SEVERE, "bad living object format", e);
+                JOptionPane.showMessageDialog(MainWindow.this, arrayOf("Bad living object format", e.getLocalizedMessage()));
+                changeElement(element, element);
+            }
+        }
+    }
+
+    private void mapListListTableItemsButtonColumnClicked(int row) {
+        final ItemsDialog dialog = new ItemsDialog(this, "Items of " + mapListListTableModel.getValueAt(row, MAP_LIST_LIST_NAME_COLUMN));
+        dialog.setItems(((ItemsColumnContents) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_ITEMS_COLUMN)).items);
+
+        dialog.addListener(new ItemsDialog.Listener() {
+            @Override
+            public void saveButtonClicked(ItemsDialog.Event event) {
+                mapListListTableModel.setValueAt(new ItemsColumnContents(event.items), row, MAP_LIST_LIST_ITEMS_COLUMN);
+                cancelButtonClicked(event);
+            }
+
+            @Override
+            public void cancelButtonClicked(ItemsDialog.Event event) {
+                event.dialog.setVisible(false);
+                event.dialog.dispose();
+            }
+        });
+
+        dialog.setVisible(true);
+    }
+
+    private void mapListListTableImageButtonColumnClicked(int row) {
+        final JFileChooser fileChooser = new JFileChooser("Select image file");
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        final int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            final File selectedFile = fileChooser.getSelectedFile();
+
+            try {
+                final BufferedImage image = ImageIO.read(selectedFile);
+
+                if (image == null) {
+                    throw new IllegalArgumentException("File is not an image");
+                }
+
+                mapListListTableModel.setValueAt(new ImageColumnContents(image), row, MAP_LIST_LIST_IMAGE_COLUMN);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, arrayOf("Bad file selected", e.getLocalizedMessage()));
+            }
+        }
+    }
+
+    private LivingObject getElementFromRow(int row) {
+        final LocalDateTime creatingTime;
+
+        try {
+            creatingTime = parseLocalDateTime((String) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_CREATING_TIME_COLUMN));
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "bad creating time format", e);
+            JOptionPane.showMessageDialog(MainWindow.this, arrayOf("Bad creating time format", e.getLocalizedMessage()));
+            return null;
+        }
+
+        final LivingObject element = new LivingObject(
+                (String) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_NAME_COLUMN),
+                (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_VOLUME_COLUMN),
+                creatingTime,
+                (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_X_COLUMN),
+                (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_Y_COLUMN),
+                (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_Z_COLUMN)
+        );
+
+        setLivingObjectLives(element, (Boolean) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_LIVES_COLUMN));
+        element.getItems().addAll(((ItemsColumnContents) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_ITEMS_COLUMN)).items);
+        callIfNotNull(mapListListTableModel.getValueAt(row, MAP_LIST_LIST_IMAGE_COLUMN), contents ->
+                element.setImage(cloneBufferedImage(((ImageColumnContents) contents).image)));
+
+        return element;
+    }
+
+    private void addListRow(LivingObject element) {
+        elementsListIndexes.put(element, mapListListTableModel.getRowCount());
+        listElements.put(mapListListTableModel.getRowCount(), element);
+
+        final boolean pmlltc = programmaticallyMapListListTableChange.get();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTableModel.addRow(arrayOf(
+                element.getName(),
+                element.getVolume(),
+                element.getCreatingTime().format(Object.DATE_TIME_FORMATTER),
+                element.getX(),
+                element.getY(),
+                element.getZ(),
+                element.isLives(),
+                new ItemsColumnContents(element.getItems()),
+                ImageColumnContents.get(element.getImage())
+        ));
+        programmaticallyMapListListTableChange.set(pmlltc);
+    }
+
+    private void deselectElement() {
+        // TODO deselect on map
+
+        final boolean pmlltc = programmaticallyMapListListTableChange.get();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTable.getSelectionModel().clearSelection();
+        programmaticallyMapListListTableChange.set(pmlltc);
+
+        selectedElement = null;
+    }
+
+    private void selectElement(LivingObject element) {
+        // TODO select on map
+
+        final boolean pmlltc = programmaticallyMapListListTableChange.get();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTable.getSelectionModel().setSelectionInterval(elementsListIndexes.get(element),
+                elementsListIndexes.get(element));
+        programmaticallyMapListListTableChange.set(pmlltc);
+
+        selectedElement = element;
+    }
+
+    private void selectElement(int listIndex) {
+        final LivingObject element = listElements.get(listIndex);
+
+        // TODO select on map
+
+        final boolean pmlltc = programmaticallyMapListListTableChange.get();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTable.getSelectionModel().setSelectionInterval(listIndex, listIndex);
+        programmaticallyMapListListTableChange.set(pmlltc);
+
+        selectedElement = element;
+    }
+
+    private void changeElement(LivingObject oldElement, LivingObject newElement) {
+        final int listIndex = elementsListIndexes.remove(oldElement);
+        elementsListIndexes.put(newElement, listIndex);
+        listElements.put(listIndex, newElement);
+
+        // TODO change on map
+
+        final boolean pmlltc = programmaticallyMapListListTableChange.get();
+        programmaticallyMapListListTableChange.set(true);
+        mapListListTableModel.setValueAt(newElement.getName(), listIndex, MAP_LIST_LIST_NAME_COLUMN);
+        mapListListTableModel.setValueAt(newElement.getVolume(), listIndex, MAP_LIST_LIST_VOLUME_COLUMN);
+        mapListListTableModel.setValueAt(newElement.getCreatingTime().format(Object.DATE_TIME_FORMATTER), listIndex, MAP_LIST_LIST_CREATING_TIME_COLUMN);
+        mapListListTableModel.setValueAt(newElement.getX(), listIndex, MAP_LIST_LIST_X_COLUMN);
+        mapListListTableModel.setValueAt(newElement.getY(), listIndex, MAP_LIST_LIST_Y_COLUMN);
+        mapListListTableModel.setValueAt(newElement.getZ(), listIndex, MAP_LIST_LIST_Z_COLUMN);
+        mapListListTableModel.setValueAt(newElement.isLives(), listIndex, MAP_LIST_LIST_LIVES_COLUMN);
+        mapListListTableModel.setValueAt(new ItemsColumnContents(newElement.getItems()), listIndex, MAP_LIST_LIST_ITEMS_COLUMN);
+        mapListListTableModel.setValueAt(ImageColumnContents.get(newElement.getImage()), listIndex, MAP_LIST_LIST_IMAGE_COLUMN);
+        programmaticallyMapListListTableChange.set(pmlltc);
+
+        selectElement(newElement);
+    }
+
     private void sendEvent(BiConsumer<Listener, Event> handler) {
+        sendEvent(handler, selectedElement, selectedElement);
+    }
+
+    private void sendEvent(BiConsumer<Listener, Event> handler, LivingObject oldElement, LivingObject newElement) {
         final ButtonModel selection = mainLanguageButtonGroup.getSelection();
 
-        sendEvent(handler, new Event(this, selection == null ? "" : selection.getActionCommand(), null));
+        sendEvent(handler, new Event(this,
+                selection == null ? "" : selection.getActionCommand(),
+                oldElement, newElement));
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler, Event event) {

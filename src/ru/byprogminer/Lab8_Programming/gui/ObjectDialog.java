@@ -210,8 +210,9 @@ public class ObjectDialog<T extends Object> extends JDialog {
             imageLabel.setBorder(DEFAULT_MARGIN_BORDER);
             contentPane.add(imageLabel, new GridBagConstraints(0, row, 1, 1, 1, 0, ABOVE_BASELINE, HORIZONTAL, new Insets(0, 0, 0, MARGIN), 0, 0));
 
-            if (initialLivingObject != null) {
-                imageButton.setIcon(imageToIcon(image = initialLivingObject.getImage()));
+            if (initialLivingObject != null && initialLivingObject.getImage() != null) {
+                imageButton.setIcon(new ImageIcon(makeThumbnail(image =
+                        initialLivingObject.getImage(), MAX_ICON_WIDTH, MAX_ICON_HEIGHT)));
             }
 
             imageButton.setFont(DEFAULT_BUTTON_FONT);
@@ -300,10 +301,10 @@ public class ObjectDialog<T extends Object> extends JDialog {
                 image = ImageIO.read(selectedFile);
 
                 if (image == null) {
-                    throw new IllegalArgumentException("File is not image");
+                    throw new IllegalArgumentException("File is not an image");
                 }
 
-                imageButton.setIcon(imageToIcon(image));
+                imageButton.setIcon(new ImageIcon(makeThumbnail(image, MAX_ICON_WIDTH, MAX_ICON_HEIGHT)));
                 imageButton.setText(selectedFile.getAbsolutePath());
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, arrayOf("Bad file selected", e.getLocalizedMessage()));
@@ -333,22 +334,6 @@ public class ObjectDialog<T extends Object> extends JDialog {
         });
 
         dialog.setVisible(true);
-    }
-
-    private Icon imageToIcon(BufferedImage image) {
-        final int oldWidth = image.getWidth();
-        final int oldHeight = image.getHeight();
-
-        final double coef = Math.min(
-                (double) Math.min(MAX_ICON_WIDTH, oldWidth) / oldWidth,
-                (double) Math.min(MAX_ICON_HEIGHT, oldHeight) / oldHeight
-        );
-
-        final BufferedImage preparedImage = new BufferedImage((int) (oldWidth * coef),
-                (int) (oldHeight * coef), BufferedImage.TYPE_INT_ARGB);
-
-        preparedImage.getGraphics().drawImage(image, 0, 0, preparedImage.getWidth(), preparedImage.getHeight(), null);
-        return new ImageIcon(preparedImage);
     }
 
     @SuppressWarnings("unchecked")

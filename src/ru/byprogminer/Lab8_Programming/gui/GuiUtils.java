@@ -67,6 +67,7 @@ public class GuiUtils {
 
         source.setRowHeight(rowHeight);
         source.getTableHeader().setFont(DEFAULT_BUTTON_FONT);
+        source.setAutoResizeMode(JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS);
         scrollPane.setColumnHeader(new JViewport() {
 
             @Override

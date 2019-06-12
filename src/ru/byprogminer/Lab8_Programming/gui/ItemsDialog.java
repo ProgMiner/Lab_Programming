@@ -5,6 +5,7 @@ import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -61,8 +62,19 @@ public class ItemsDialog extends JDialog {
 
         int row = 0;
         configureDefaultJTable(itemsTable, itemsScrollPane);
+
+        final TableColumnModel itemsTableColumnModel = itemsTable.getColumnModel();
+        itemsTableColumnModel.getColumn(0).setMinWidth(100);
+        itemsTableColumnModel.getColumn(0).setPreferredWidth(120);
+        itemsTableColumnModel.getColumn(1).setMinWidth(60);
+        itemsTableColumnModel.getColumn(2).setMinWidth(145);
+        itemsTableColumnModel.getColumn(3).setMinWidth(25);
+        itemsTableColumnModel.getColumn(4).setMinWidth(25);
+        itemsTableColumnModel.getColumn(5).setMinWidth(25);
+
         itemsTable.getSelectionModel().addListSelectionListener(listSelectionEvent ->
                 removeButton.setEnabled(!itemsTable.getSelectionModel().isSelectionEmpty()));
+        itemsTable.doLayout();
         contentPane.add(itemsScrollPane, new GridBagConstraints(0, row, 2, 1, 1, 1, CENTER, BOTH, new Insets(0, 0, MARGIN, 0), 0, 0));
         ++row;
 

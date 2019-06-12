@@ -83,6 +83,12 @@ public interface CollectionModel {
 
     int removeGreater(LivingObject livingObject, String username);
 
+    default int replaceElement(LivingObject oldElement, LivingObject newElement) {
+        return replaceElement(oldElement, newElement, null);
+    }
+
+    int replaceElement(LivingObject oldElement, LivingObject newElement, String username);
+
     Map<String, String> getMetadata();
 
     Collection<LivingObject> get();

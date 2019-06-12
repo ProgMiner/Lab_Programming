@@ -39,6 +39,10 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
         mainWindow.addListener(this);
     }
 
+    private void refreshElements() {
+        renderer.render(collectionController.show());
+    }
+
     @Override
     public void exec() throws IllegalStateException {
         SwingUtilities.invokeLater(() -> mainWindow.setVisible(true));
@@ -47,6 +51,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
             Thread.yield();
         }
 
+        refreshElements();
         while (mainWindow.isVisible()) {
             Thread.yield();
         }
@@ -70,6 +75,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
             }
 
             renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+            refreshElements();
         }).start();
     }
 
@@ -84,6 +90,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
             }
 
             renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+            refreshElements();
         }).start();
     }
 
@@ -107,6 +114,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
             renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
                     new CsvReader(scanner))).getObjects(), currentUser.get()));
+            refreshElements();
         }).start();
     }
 
@@ -128,6 +136,16 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
     @Override
     public void mainAboutMenuItemClicked(MainWindow.Event event) {
         // TODO
+    }
+
+    @Override
+    public void elementChanged(MainWindow.Event event) {
+        new Thread(() -> {
+            renderer.render(collectionController
+                    .replaceElement(event.selectedElement, event.newElement, currentUser.get()));
+
+            refreshElements();
+        }).start();
     }
 
     @Override
@@ -183,10 +201,11 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
     @Override
     public void addButtonClicked(MainWindow.Event event) {
         new Thread(() -> {
-            final LivingObject element = requestElement(event.window, "Add element");
+            final LivingObject element = requestElement(event.window, "Add element", event.selectedElement);
 
             if (element != null) {
                 renderer.render(collectionController.add(element, currentUser.get()));
+                refreshElements();
             }
         }).start();
     }
@@ -194,10 +213,11 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
     @Override
     public void removeButtonClicked(MainWindow.Event event) {
         new Thread(() -> {
-            final LivingObject element = requestElement(event.window, "Remove element");
+            final LivingObject element = requestElement(event.window, "Remove element", event.selectedElement);
 
             if (element != null) {
                 renderer.render(collectionController.remove(element, currentUser.get()));
+                refreshElements();
             }
         }).start();
     }
@@ -205,10 +225,11 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
     @Override
     public void removeLowerButtonClicked(MainWindow.Event event) {
         new Thread(() -> {
-            final LivingObject element = requestElement(event.window, "Remove lower elements");
+            final LivingObject element = requestElement(event.window, "Remove lower elements", event.selectedElement);
 
             if (element != null) {
                 renderer.render(collectionController.removeLower(element, currentUser.get()));
+                refreshElements();
             }
         }).start();
     }
@@ -216,20 +237,21 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
     @Override
     public void removeGreaterButtonClicked(MainWindow.Event event) {
         new Thread(() -> {
-            final LivingObject element = requestElement(event.window, "Remove greater elements");
+            final LivingObject element = requestElement(event.window, "Remove greater elements", event.selectedElement);
 
             if (element != null) {
                 renderer.render(collectionController.removeGreater(element, currentUser.get()));
+                refreshElements();
             }
         }).start();
     }
 
-    private LivingObject requestElement(Window parentWindow, String title) {
+    private LivingObject requestElement(Window parentWindow, String title, LivingObject selectedElement) {
         final AtomicReference<LivingObject> elementReference = new AtomicReference<>();
 
         final AtomicReference<ObjectDialog<LivingObject>> dialogReference = new AtomicReference<>();
         SwingUtilities.invokeLater(() -> {
-            final ObjectDialog<LivingObject> dialog = new ObjectDialog<>(parentWindow, title, ObjectDialog.Kind.LIVING_OBJECT, null);
+            final ObjectDialog<LivingObject> dialog = new ObjectDialog<>(parentWindow, title, ObjectDialog.Kind.LIVING_OBJECT, selectedElement);
             dialog.addListener(new ObjectDialog.Listener<LivingObject>() {
 
                 @Override

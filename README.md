@@ -7,12 +7,13 @@
     - [ ] Main window
       - [ ] Map
       - [ ] List
-        - [ ] Items window
+        - [X] Items window
+        - [ ] Sort and filter
       - [ ] Login
         - [ ] Password checking packet
         - [X] Login window
       - [X] Collection information window
-      - [ ] Element window
+      - [X] Element window
     - [ ] Users management (removing/etc)
       - [ ] Users removing
       - [ ] Username changing
@@ -20,7 +21,7 @@
       - [ ] File menu
         - [ ] Users window
       - [ ] About window
-    - [ ] Views handling
+    - [X] Views handling
   - [ ] Connect window
   - [ ] L10n and i18n
   - [ ] Implement all GUI abilities in CUI

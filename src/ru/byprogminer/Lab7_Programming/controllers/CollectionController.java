@@ -85,6 +85,20 @@ public class CollectionController {
         });
     }
 
+    public View replaceElement(LivingObject oldElement, LivingObject newElement, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("collection.replaceElement.all", "collection.replaceElement.own"), () -> {
+            try {
+                if (usersModel.hasPermission(credentials.username, "collection.replaceElement.all")) {
+                    return new ReplaceView(collectionModel.replaceElement(oldElement, newElement));
+                }
+
+                return new ReplaceView(collectionModel.replaceElement(oldElement, newElement, credentials.username));
+            } catch (Throwable e) {
+                return new ReplaceView(e.getLocalizedMessage());
+            }
+        });
+    }
+
     public InfoView info() {
         final Map<String, String> metadata = new HashMap<>();
         metadata.put("Collection type", "HashSet");

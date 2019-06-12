@@ -10,6 +10,7 @@ import ru.byprogminer.Lab5_Programming.throwing.ThrowingRunnable;
 import ru.byprogminer.Lab5_Programming.throwing.ThrowingSupplier;
 import ru.byprogminer.Lab7_Programming.logging.Loggers;
 
+import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -226,6 +227,34 @@ public final class LabUtils {
         }
 
         return false;
+    }
+
+    // https://stackoverflow.com/questions/3514158/how-do-you-clone-a-bufferedimage
+    public static BufferedImage cloneBufferedImage(BufferedImage bi) {
+        if (bi == null) {
+            return null;
+        }
+
+        return new BufferedImage(bi.getColorModel(),
+                bi.copyData(null),
+                bi.getColorModel().isAlphaPremultiplied(),
+                null);
+    }
+
+    public static BufferedImage makeThumbnail(BufferedImage image, int maxWidth, int maxHeight) {
+        final int oldWidth = image.getWidth();
+        final int oldHeight = image.getHeight();
+
+        final double coef = Math.min(
+                (double) Math.min(maxWidth, oldWidth) / oldWidth,
+                (double) Math.min(maxHeight, oldHeight) / oldHeight
+        );
+
+        final BufferedImage preparedImage = new BufferedImage((int) (oldWidth * coef),
+                (int) (oldHeight * coef), BufferedImage.TYPE_INT_ARGB);
+
+        preparedImage.getGraphics().drawImage(image, 0, 0, preparedImage.getWidth(), preparedImage.getHeight(), null);
+        return preparedImage;
     }
 
     @SuppressWarnings("unchecked")

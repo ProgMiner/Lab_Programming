@@ -34,6 +34,7 @@ import static ru.byprogminer.Lab5_Programming.LabUtils.*;
  * |     lives     |    boolean    | NOT NULL        lives,         |                                         |
  * |     items     |    integer    | NOT NULL        items)         | FOREIGN KEY REFERENCES items_hcs(items) |
  * +---------------+---------------+--------------------------------+-----------------------------------------+
+ * TODO add image
  *
  * items_hcs:
  * +-------+---------+-------------+
@@ -259,6 +260,9 @@ public class DatabaseCollectionModel implements CollectionModel {
                 "DELETE FROM \"%1$s\" WHERE hash_code = ANY(?) AND\n" +
                 "    (SELECT COUNT(*) FROM \"%2$s\" WHERE hash_code = hash_code) = 0\n" +
                 "RETURNING items";
+
+        private static final String GET_LIVING_OBJECT_OWNER = "" +
+                "SELECT username FROM \"%1$s\" WHERE id = (SELECT user_id FROM \"%2$s\" WHERE hash_code = ?)";
 
         private static final String GET_METADATA = "" +
                 "SELECT key, value FROM \"%1$s\"\n" +
@@ -544,6 +548,35 @@ public class DatabaseCollectionModel implements CollectionModel {
         itemsHcStatement.executeUpdate();
 
         itemStatement.executeUpdate();
+    }
+
+    @Override
+    public int replaceElement(LivingObject oldElement, LivingObject newElement, String username) {
+        return templateTransaction(() -> {
+            final int hashCode = oldElement.hashCode();
+            final String owner = getLivingObjectOwner(hashCode);
+            final int remove = removeOwned(Collections.singleton(hashCode), username);
+
+            if (remove > 0) {
+                final Map<LivingObject, String> elements = new HashMap<>();
+                elements.put(newElement, owner);
+
+                return doAddAll(elements);
+            }
+
+            return 0;
+        });
+    }
+
+    private String getLivingObjectOwner(int hashCode) throws SQLException {
+        final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
+                statements.computeIfAbsent("getLivingObjectOwner", throwing().function(s ->
+                        connection.prepareStatement(String.format(Query.GET_LIVING_OBJECT_OWNER,
+                                usersTableName, usersLivingObjectsTableName)))));
+
+        preparedStatement.setInt(1, hashCode);
+        return mapResultSet(preparedStatement.executeQuery(), row -> row.getString(1))
+                .findAny().orElse(null);
     }
 
     @Override

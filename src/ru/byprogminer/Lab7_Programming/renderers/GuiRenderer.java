@@ -4,9 +4,12 @@ import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.views.*;
 import ru.byprogminer.Lab8_Programming.gui.CollectionInfoDialog;
+import ru.byprogminer.Lab8_Programming.gui.GuiDisabler;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 
 import javax.swing.*;
+import java.util.Collections;
+import java.util.HashSet;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
@@ -58,7 +61,12 @@ public class GuiRenderer implements Renderer {
         if (view instanceof ShowView) {
             final ShowView showView = (ShowView) view;
 
-            // TODO
+            SwingUtilities.invokeLater(() -> {
+                final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
+                mainWindow.setElements(Collections.unmodifiableSet(new HashSet<>(showView.elements)));
+
+                disabler.revert();
+            });
 
             return;
         }
@@ -92,6 +100,23 @@ public class GuiRenderer implements Renderer {
             } else {
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
                         modifyView.affectedRows + " elements removed."));
+            }
+
+            return;
+        }
+
+        if (view instanceof ReplaceView) {
+            final ModifyView modifyView = (ModifyView) view;
+
+            if (view.error == null && modifyView.affectedRows == 0) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                        "No one elements changed."));
+            } else if (modifyView.affectedRows == 1) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                        "One element changed."));
+            } else {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                        modifyView.affectedRows + " elements changed."));
             }
 
             return;
