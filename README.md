@@ -3,26 +3,25 @@
 ## Checklist
 
   - Implement GUI
-    - [X] Server starting window
+    - [X] Server starting dialog
     - [ ] Main window
       - [ ] Map
       - [ ] List
-        - [X] Items window
+        - [X] Items dialog
         - [ ] Sort and filter
       - [ ] Login
         - [ ] Password checking packet
-        - [X] Login window
-      - [X] Collection information window
-      - [X] Element window
-    - [ ] Users management (removing/etc)
-      - [ ] Users removing
-      - [ ] Username changing
+        - [X] Login dialog
+      - [X] Collection information dialog
+      - [X] Element dialog
+    - [X] Users management (removing/etc)
     - [ ] Menu bar
       - [ ] File menu
         - [ ] Users window
-      - [ ] About window
+          - [ ] Permissions dialog
+      - [X] About dialog
     - [X] Views handling
-  - [ ] Connect window
+  - [ ] Connect dialog
   - [ ] L10n and i18n
   - [ ] Implement all GUI abilities in CUI
   - [ ] ...
