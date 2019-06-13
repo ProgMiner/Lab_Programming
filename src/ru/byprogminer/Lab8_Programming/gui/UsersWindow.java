@@ -96,7 +96,7 @@ public class UsersWindow extends JFrame {
         repaint();
     }
 
-    private void usersTableSelectionModelValueChanged() {
+    private void usersSelectionModelValueChanged() {
         final int selection = usersTable.getSelectionModel().getMinSelectionIndex();
 
         if (selection != -1) {
@@ -141,8 +141,8 @@ public class UsersWindow extends JFrame {
     private void build() {
         configureDefaultJTable(usersTable, usersScrollPane);
 
-        final TableColumnModel itemsTableColumnModel = usersTable.getColumnModel();
-        itemsTableColumnModel.getColumn(0).setMinWidth(100);
+        final TableColumnModel usersTableColumnModel = usersTable.getColumnModel();
+        usersTableColumnModel.getColumn(0).setMinWidth(100);
 
         usersTable.doLayout();
         contentPane.add(usersScrollPane, new GridBagConstraints(0, 0, 1, 10, 1, 1, CENTER, BOTH, new Insets(0, 0, MARGIN, MARGIN), 0, 0));
@@ -203,7 +203,7 @@ public class UsersWindow extends JFrame {
     }
 
     private void buildListeners() {
-        usersTable.getSelectionModel().addListSelectionListener(listSelectionEvent -> usersTableSelectionModelValueChanged());
+        usersTable.getSelectionModel().addListSelectionListener(listSelectionEvent -> usersSelectionModelValueChanged());
         changeUsernameButton.addActionListener(actionEvent -> sendEvent(Listener::changeUsernameButtonClicked));
         changePasswordButton.addActionListener(actionEvent -> sendEvent(Listener::changePasswordButtonClicked));
         permissionsButton.addActionListener(actionEvent -> sendEvent(Listener::permissionsButtonClicked));

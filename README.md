@@ -15,11 +15,7 @@
       - [X] Collection information dialog
       - [X] Element dialog
     - [X] Users management (removing/etc)
-    - [ ] Menu bar
-      - [ ] File menu
-        - [ ] Users window
-          - [ ] Permissions dialog
-      - [X] About dialog
+    - [X] Menu bar
     - [X] Views handling
   - [ ] Connect dialog
   - [ ] L10n and i18n

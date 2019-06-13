@@ -154,6 +154,38 @@ public class UsersController {
         });
     }
 
+    public PermissionsView getPermissions(String username) {
+        return new PermissionsView(usersModel.getPermissions(username));
+    }
+
+    public View givePermission(String username, String permission, Credentials credentials) {
+        return permissionTemplate(credentials, "users.givePermission.user." + username, () -> {
+            try {
+                if (!usersModel.hasPermission(credentials.username, permission)) {
+                    return new NotPermittedView();
+                }
+
+                return new GivePermissionView(usersModel.givePermission(username, permission));
+            } catch (Throwable e) {
+                return new GivePermissionView(errorMessage(e));
+            }
+        });
+    }
+
+    public View takePermission(String username, String permission, Credentials credentials) {
+        return permissionTemplate(credentials, "users.takePermission.user." + username, () -> {
+            try {
+                if (!usersModel.hasPermission(credentials.username, permission)) {
+                    return new NotPermittedView();
+                }
+
+                return new TakePermissionView(usersModel.takePermission(username, permission));
+            } catch (Throwable e) {
+                return new TakePermissionView(errorMessage(e));
+            }
+        });
+    }
+
     private void sendRegisterMail(String username, String email, String password) throws MessagingException {
         MailSender.send(email,
                 String.format(RegisterMail.SUBJECT, username),

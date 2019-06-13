@@ -66,8 +66,8 @@ public class GuiRenderer implements Renderer {
 
             SwingUtilities.invokeLater(() -> {
                 final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
-                mainWindow.setElements(Collections.unmodifiableSet(new HashSet<>(showView.elements)));
 
+                mainWindow.setElements(Collections.unmodifiableSet(new HashSet<>(showView.elements)));
                 disabler.revert();
             });
 
@@ -182,7 +182,12 @@ public class GuiRenderer implements Renderer {
         if (view instanceof UsersView) {
             final UsersView usersView = (UsersView) view;
 
-            SwingUtilities.invokeLater(() -> usersWindow.setUsers(usersView.users));
+            SwingUtilities.invokeLater(() -> {
+                final GuiDisabler<UsersWindow> disabler = GuiDisabler.disable(usersWindow);
+
+                usersWindow.setUsers(usersView.users);
+                disabler.revert();
+            });
         }
 
         if (view instanceof ChangeUsernameView) {

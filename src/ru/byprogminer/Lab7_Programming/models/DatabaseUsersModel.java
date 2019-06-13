@@ -306,13 +306,13 @@ public class DatabaseUsersModel implements UsersModel {
     }
 
     @Override
-    public void givePermission(String username, String permission) {
-        template(supplier(() -> doGivePermission(username, permission)));
+    public boolean givePermission(String username, String permission) {
+        return template(() -> doGivePermission(username, permission));
     }
 
-    private void doGivePermission(String username, String permission) throws SQLException {
+    private boolean doGivePermission(String username, String permission) throws SQLException {
         if (doHasPermission(username, Collections.singleton(permission))) {
-            return;
+            return false;
         }
 
         final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
@@ -323,12 +323,12 @@ public class DatabaseUsersModel implements UsersModel {
         int pointer = 0;
         preparedStatement.setString(++pointer, username);
         preparedStatement.setString(++pointer, permission);
-        preparedStatement.executeUpdate();
+        return preparedStatement.executeUpdate() > 0;
     }
 
     @Override
-    public void takePermission(String username, String permission) {
-        template(supplier(() -> {
+    public boolean takePermission(String username, String permission) {
+        return template(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("takePermission", throwing().function(s ->
                             connection.prepareStatement(String.format(Query.TAKE_PERMISSION,
@@ -337,8 +337,8 @@ public class DatabaseUsersModel implements UsersModel {
             int pointer = 0;
             preparedStatement.setString(++pointer, username);
             preparedStatement.setString(++pointer, permission);
-            preparedStatement.executeUpdate();
-        }));
+            return preparedStatement.executeUpdate() > 0;
+        });
     }
 
     @Override

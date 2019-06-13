@@ -52,8 +52,8 @@ public interface UsersModel {
     }
 
     boolean hasPermission(String username, Set<String> permissions);
-    void givePermission(String username, String permission);
-    void takePermission(String username, String permission);
+    boolean givePermission(String username, String permission);
+    boolean takePermission(String username, String permission);
     Set<String> getPermissions(String username);
 
     static Set<String> getAllPermissionLevels(String permission) {

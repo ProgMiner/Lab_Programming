@@ -16,6 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.Listener {
@@ -79,8 +80,13 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                 return;
             }
 
-            renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
-            refreshElements();
+            final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
+            new Thread(() -> {
+                renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+
+                refreshElements();
+                disabler.revert();
+            }).start();
         });
     }
 
@@ -94,8 +100,13 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                 return;
             }
 
-            renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
-            refreshElements();
+            final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
+            new Thread(() -> {
+                renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
+
+                disabler.revert();
+                refreshElements();
+            }).start();
         });
     }
 
@@ -117,9 +128,14 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                 throw new IllegalArgumentException("file not found", e);
             }
 
-            renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
-                    new CsvReader(scanner))).getObjects(), currentUser.get()));
-            refreshElements();
+            final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
+            new Thread(() -> {
+                renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
+                        new CsvReader(scanner))).getObjects(), currentUser.get()));
+
+                disabler.revert();
+                refreshElements();
+            });
         });
     }
 
@@ -157,11 +173,14 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
     @Override
     public void elementChanged(MainWindow.Event event) {
+        final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
+
         new Thread(() -> {
             renderer.render(collectionController
                     .replaceElement(event.selectedElement, event.newElement, currentUser.get()));
 
             refreshElements();
+            disabler.revert();
         }).start();
     }
 
@@ -174,6 +193,8 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
             @Override
             public void okButtonClicked(UserDialog.Event userDialogEvent) {
+                final GuiDisabler<UserDialog> disabler = GuiDisabler.disable(userDialogEvent.dialog);
+
                 new Thread(() -> {
                     final Credentials credentials = new Credentials(userDialogEvent.username, new String(userDialogEvent.password));
 
@@ -182,6 +203,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(event.window,
                                 "Wrong password or user is not exists"));
 
+                        disabler.revert();
                         return;
                     }
 
@@ -310,11 +332,15 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
                 @Override
                 public void okButtonClicked(UserDialog.Event dialogEvent) {
-                    renderer.render(usersController.changeUsername(event.selectedUser,
-                            dialogEvent.username, currentUser.get()));
+                    GuiDisabler.disable(dialogEvent.dialog);
 
-                    refreshUsers();
-                    cancelButtonClicked(dialogEvent);
+                    new Thread(() -> {
+                        renderer.render(usersController.changeUsername(event.selectedUser,
+                                dialogEvent.username, currentUser.get()));
+
+                        refreshUsers();
+                        SwingUtilities.invokeLater(() -> cancelButtonClicked(dialogEvent));
+                    }).start();
                 }
 
                 @Override
@@ -338,10 +364,14 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
                 @Override
                 public void okButtonClicked(UserDialog.Event dialogEvent) {
-                    renderer.render(usersController.changePassword(event.selectedUser,
-                            new String(dialogEvent.password), currentUser.get()));
+                    GuiDisabler.disable(dialogEvent.dialog);
 
-                    cancelButtonClicked(dialogEvent);
+                    new Thread(() -> {
+                        renderer.render(usersController.changePassword(event.selectedUser,
+                                new String(dialogEvent.password), currentUser.get()));
+
+                        SwingUtilities.invokeLater(() -> cancelButtonClicked(dialogEvent));
+                    }).start();
                 }
 
                 @Override
@@ -357,15 +387,65 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
     @Override
     public void permissionsButtonClicked(UsersWindow.Event event) {
-        /* TODO
-        SwingUtilities.invokeLater(() -> {
-            final PermissionsDialog dialog = new PermissionsDialog(event.window, "Permissions of " + event.selectedUser);
+        new Thread(() ->
+                SwingUtilities.invokeLater(() -> {
+                    final PermissionsDialog dialog = new PermissionsDialog(event.window,
+                            "Permissions of " + event.selectedUser);
 
-            dialog.addListener(new PermissionsDialog.Listener() {});
+                    dialog.addListener(new PermissionsDialog.Listener() {
 
-            dialog.setVisible(true);
-        });
-        */
+                        {
+                            refreshPermissions(dialog);
+                        }
+
+                        @Override
+                        public void addButtonClicked(PermissionsDialog.Event permissionsEvent) {
+                            new Thread(() -> {
+                                final String permission = JOptionPane.showInputDialog(permissionsEvent.dialog, "Permission name: ");
+
+                                if (permission != null) {
+                                    renderer.render(usersController.givePermission(event.selectedUser,
+                                            permission, currentUser.get()));
+
+                                    refreshPermissions(permissionsEvent.dialog);
+                                }
+                            }).start();
+                        }
+
+                        @Override
+                        public void removeButtonClicked(PermissionsDialog.Event permissionsEvent) {
+                            final GuiDisabler<PermissionsDialog> disabler = GuiDisabler.disable(permissionsEvent.dialog);
+
+                            new Thread(() -> {
+                                renderer.render(usersController.takePermission(event.selectedUser,
+                                        permissionsEvent.permission, currentUser.get()));
+
+                                refreshPermissions(permissionsEvent.dialog);
+                                SwingUtilities.invokeLater(disabler::revert);
+                            }).start();
+                        }
+
+                        @Override
+                        public void okButtonClicked(PermissionsDialog.Event event) {
+                            event.dialog.setVisible(false);
+                            event.dialog.dispose();
+                        }
+
+                        private void refreshPermissions(PermissionsDialog dialog) {
+                            final Set<String> permissions = usersController.getPermissions(event.selectedUser).permissions;
+
+                            SwingUtilities.invokeLater(() -> {
+                                final GuiDisabler<PermissionsDialog> disabler = GuiDisabler.disable(dialog);
+
+                                dialog.setPermissions(permissions);
+                                disabler.revert();
+                            });
+                        }
+                    });
+
+                    dialog.setVisible(true);
+                })
+        ).start();
     }
 
     @Override
@@ -377,10 +457,14 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
                 @Override
                 public void okButtonClicked(UserDialog.Event dialogEvent) {
-                    renderer.render(usersController.register(dialogEvent.username, dialogEvent.email, currentUser.get()));
-                    refreshUsers();
+                    GuiDisabler.disable(dialogEvent.dialog);
 
-                    cancelButtonClicked(dialogEvent);
+                    new Thread(() -> {
+                        renderer.render(usersController.register(dialogEvent.username, dialogEvent.email, currentUser.get()));
+                        refreshUsers();
+
+                        cancelButtonClicked(dialogEvent);
+                    }).start();
                 }
 
                 @Override
@@ -397,11 +481,11 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
     @Override
     public void removeButtonClicked(UsersWindow.Event event) {
         SwingUtilities.invokeLater(() -> {
-            final int result = JOptionPane.showConfirmDialog(usersWindow, "Are you sure? This action cannot be undone!");
-
-            if (result == JOptionPane.YES_OPTION) {
-                renderer.render(usersController.removeUser(event.selectedUser, currentUser.get()));
-                refreshUsers();
+            if (JOptionPane.showConfirmDialog(usersWindow, "Are you sure? This action cannot be undone!") == JOptionPane.YES_OPTION) {
+                new Thread(() -> {
+                    renderer.render(usersController.removeUser(event.selectedUser, currentUser.get()));
+                    refreshUsers();
+                }).start();
             }
         });
     }
