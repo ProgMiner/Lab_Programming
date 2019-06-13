@@ -15,8 +15,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.PASSWORD_ALPHABET;
-import static ru.byprogminer.Lab5_Programming.LabUtils.setOf;
+import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 public class UsersController {
 
@@ -44,25 +43,49 @@ public class UsersController {
         return authorizedTemplate(credentials, () -> new CheckPasswordView(true));
     }
 
-    public View changePassword(String password, Credentials credentials) {
-        final Set<String> permissions = setOf("users.changePassword.own");
+    public UsersView get() {
+        return new UsersView(usersModel.get());
+    }
 
-        if (credentials != null) {
-            permissions.add("users.changePassword.user." + credentials);
+    public View changeUsername(String username, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("users.changeUsername.own", "users.changeUsername.all"), () -> {
+            try {
+                return new ChangeUsernameView(usersModel.setUsername(Objects
+                        .requireNonNull(credentials).username, username));
+            } catch (Throwable e) {
+                return new ChangeUsernameView(errorMessage(e));
+            }
+        });
+    }
+
+    public View changeUsername(String username, String newUsername, Credentials credentials) {
+        if (isOwner(username, credentials)) {
+            return changeUsername(newUsername, credentials);
         }
 
-        return permissionTemplate(credentials, permissions, () -> {
+        return permissionTemplate(credentials, setOf("users.changeUsername.all",
+                "users.changeUsername.user." + username), () -> {
+            try {
+                return new ChangeUsernameView(usersModel.setUsername(username, newUsername));
+            } catch (Throwable e) {
+                return new ChangeUsernameView(errorMessage(e));
+            }
+        });
+    }
+
+    public View changePassword(String password, Credentials credentials) {
+        return permissionTemplate(credentials, setOf("users.changePassword.own", "users.changePassword.all"), () -> {
             try {
                 return new ChangePasswordView(usersModel.setPassword(Objects
                         .requireNonNull(credentials).username, password));
             } catch (Throwable e) {
-                return new ChangePasswordView(e.getLocalizedMessage());
+                return new ChangePasswordView(errorMessage(e));
             }
         });
     }
 
     public View changePassword(String username, String password, Credentials credentials) {
-        if (username == null) {
+        if (isOwner(username, credentials)) {
             return changePassword(password, credentials);
         }
 
@@ -71,7 +94,7 @@ public class UsersController {
             try {
                 return new ChangePasswordView(usersModel.setPassword(username, password));
             } catch (Throwable e) {
-                return new ChangePasswordView(e.getLocalizedMessage());
+                return new ChangePasswordView(errorMessage(e));
             }
         });
     }
@@ -101,7 +124,32 @@ public class UsersController {
 
                 return new RegisterView(userRegistered, username, email, mailSent ? null : password);
             } catch (Throwable e) {
-                return new RegisterView(e.getLocalizedMessage());
+                return new RegisterView(errorMessage(e));
+            }
+        });
+    }
+
+    public View removeUser(Credentials credentials) {
+        return permissionTemplate(credentials, setOf("users.removeUser.own", "users.removeUser.all"), () -> {
+            try {
+                return new RemoveUserView(usersModel.remove(credentials.username));
+            } catch (Throwable e) {
+                return new RemoveUserView(errorMessage(e));
+            }
+        });
+    }
+
+    public View removeUser(String username, Credentials credentials) {
+        if (isOwner(username, credentials)) {
+            return removeUser(credentials);
+        }
+
+        return permissionTemplate(credentials, setOf("users.changeUsername.all",
+                "users.changeUsername.user." + username), () -> {
+            try {
+                return new RemoveUserView(usersModel.remove(username));
+            } catch (Throwable e) {
+                return new RemoveUserView(errorMessage(e));
             }
         });
     }
@@ -111,6 +159,10 @@ public class UsersController {
                 String.format(RegisterMail.SUBJECT, username),
                 String.format(RegisterMail.TEXT, username, password)
         );
+    }
+
+    private boolean isOwner(String username, Credentials credentials) {
+        return username == null || (credentials != null && credentials.username.equals(username));
     }
 
     private View authorizedTemplate(Credentials credentials, Supplier<View> code) {

@@ -325,6 +325,8 @@ public class MainWindow extends JFrame {
         setMinimumSize(new Dimension(850, 630));
         setLocationRelativeTo(null);
         pack();
+
+        deselectElement();
     }
 
     public void setCurrentUser(String currentUser) {

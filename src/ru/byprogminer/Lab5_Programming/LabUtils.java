@@ -37,7 +37,7 @@ public final class LabUtils {
     }
 
     public static final String PASSWORD_ALPHABET = "" +
-            "0123456789abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()-+[]{}\\|,.<>/?";
+            "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()-+[]{}\\|,.<>/?";
 
     private static Logger log = Loggers.getClassLogger(LabUtils.class);
 
@@ -257,6 +257,18 @@ public final class LabUtils {
 
         preparedImage.getGraphics().drawImage(image, 0, 0, preparedImage.getWidth(), preparedImage.getHeight(), null);
         return preparedImage;
+    }
+
+    public static String errorMessage(Throwable e) {
+        if (e.getLocalizedMessage() != null) {
+            return e.getLocalizedMessage();
+        }
+
+        if (e.getMessage() != null) {
+            return e.getMessage();
+        }
+
+        return e.toString();
     }
 
     @SuppressWarnings("unchecked")

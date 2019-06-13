@@ -5,6 +5,7 @@ import ru.byprogminer.Lab3_Programming.LivingObject;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Methods behaviour:
@@ -91,8 +92,8 @@ public interface CollectionModel {
 
     Map<String, String> getMetadata();
 
-    Collection<LivingObject> get();
-    Collection<LivingObject> get(long count);
+    Set<LivingObject> get();
+    Set<LivingObject> get(long count);
 
     void load(Map<LivingObject, String> livingObjects, Map<String, String> metadata);
 }

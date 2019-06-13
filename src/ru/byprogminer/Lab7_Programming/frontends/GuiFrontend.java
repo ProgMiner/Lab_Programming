@@ -10,10 +10,7 @@ import ru.byprogminer.Lab7_Programming.controllers.UsersController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab7_Programming.views.CheckPasswordView;
-import ru.byprogminer.Lab8_Programming.gui.AboutDialog;
-import ru.byprogminer.Lab8_Programming.gui.MainWindow;
-import ru.byprogminer.Lab8_Programming.gui.ObjectDialog;
-import ru.byprogminer.Lab8_Programming.gui.UserDialog;
+import ru.byprogminer.Lab8_Programming.gui.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,9 +18,10 @@ import java.io.FileNotFoundException;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class GuiFrontend implements Frontend, MainWindow.Listener {
+public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.Listener {
 
     private final MainWindow mainWindow;
+    private final UsersWindow usersWindow;
     private final CollectionController collectionController;
     private final UsersController usersController;
     private final Renderer renderer;
@@ -33,26 +31,32 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
     public GuiFrontend(MainWindow mainWindow, CollectionController collectionController, UsersController usersController) {
         this.mainWindow = mainWindow;
+        this.usersWindow = new UsersWindow("Users");
         this.collectionController = collectionController;
         this.usersController = usersController;
-        this.renderer = new GuiRenderer(mainWindow);
+        this.renderer = new GuiRenderer(mainWindow, usersWindow);
 
         mainWindow.addListener(this);
+        usersWindow.addListener(this);
     }
 
     private void refreshElements() {
         renderer.render(collectionController.show());
     }
 
+    private void refreshUsers() {
+        renderer.render(usersController.get());
+    }
+
     @Override
     public void exec() throws IllegalStateException {
         SwingUtilities.invokeLater(() -> mainWindow.setVisible(true));
+        refreshElements();
 
         while (!mainWindow.isVisible()) {
             Thread.yield();
         }
 
-        refreshElements();
         while (mainWindow.isVisible()) {
             Thread.yield();
         }
@@ -67,7 +71,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
     @Override
     public void mainFileLoadMenuItemClicked(MainWindow.Event event) {
-        new Thread(() -> {
+        SwingUtilities.invokeLater(() -> {
             final JFileChooser fileChooser = new JFileChooser("Load from file");
             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
@@ -77,12 +81,12 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
             renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
             refreshElements();
-        }).start();
+        });
     }
 
     @Override
     public void mainFileSaveMenuItemClicked(MainWindow.Event event) {
-        new Thread(() -> {
+        SwingUtilities.invokeLater(() -> {
             final JFileChooser fileChooser = new JFileChooser("Save to file");
             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
@@ -92,12 +96,12 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
             renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
             refreshElements();
-        }).start();
+        });
     }
 
     @Override
     public void mainFileImportMenuItemClicked(MainWindow.Event event) {
-        new Thread(() -> {
+        SwingUtilities.invokeLater(() -> {
             final JFileChooser fileChooser = new JFileChooser("Import from file");
             fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 
@@ -116,12 +120,18 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
             renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
                     new CsvReader(scanner))).getObjects(), currentUser.get()));
             refreshElements();
-        }).start();
+        });
     }
 
     @Override
     public void mainFileUsersMenuItemClicked(MainWindow.Event event) {
-        // TODO
+        SwingUtilities.invokeLater(() -> {
+            usersWindow.rebuild();
+
+            usersWindow.setVisible(true);
+        });
+
+        refreshUsers();
     }
 
     @Override
@@ -288,5 +298,116 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
         }
 
         return elementReference.get();
+    }
+
+    @Override
+    public void changeUsernameButtonClicked(UsersWindow.Event event) {
+        SwingUtilities.invokeLater(() -> {
+            final UserDialog dialog = new UserDialog(event.window, "Change username of " + event.selectedUser,
+                    UserDialog.Kind.USERNAME, event.selectedUser);
+
+            dialog.addListener(new UserDialog.Listener() {
+
+                @Override
+                public void okButtonClicked(UserDialog.Event dialogEvent) {
+                    renderer.render(usersController.changeUsername(event.selectedUser,
+                            dialogEvent.username, currentUser.get()));
+
+                    refreshUsers();
+                    cancelButtonClicked(dialogEvent);
+                }
+
+                @Override
+                public void cancelButtonClicked(UserDialog.Event event) {
+                    event.dialog.setVisible(false);
+                    event.dialog.dispose();
+                }
+            });
+
+            dialog.setVisible(true);
+        });
+    }
+
+    @Override
+    public void changePasswordButtonClicked(UsersWindow.Event event) {
+        SwingUtilities.invokeLater(() -> {
+            final UserDialog dialog = new UserDialog(event.window, "Change password of " + event.selectedUser,
+                    UserDialog.Kind.PASSWORD, event.selectedUser);
+
+            dialog.addListener(new UserDialog.Listener() {
+
+                @Override
+                public void okButtonClicked(UserDialog.Event dialogEvent) {
+                    renderer.render(usersController.changePassword(event.selectedUser,
+                            new String(dialogEvent.password), currentUser.get()));
+
+                    cancelButtonClicked(dialogEvent);
+                }
+
+                @Override
+                public void cancelButtonClicked(UserDialog.Event event) {
+                    event.dialog.setVisible(false);
+                    event.dialog.dispose();
+                }
+            });
+
+            dialog.setVisible(true);
+        });
+    }
+
+    @Override
+    public void permissionsButtonClicked(UsersWindow.Event event) {
+        /* TODO
+        SwingUtilities.invokeLater(() -> {
+            final PermissionsDialog dialog = new PermissionsDialog(event.window, "Permissions of " + event.selectedUser);
+
+            dialog.addListener(new PermissionsDialog.Listener() {});
+
+            dialog.setVisible(true);
+        });
+        */
+    }
+
+    @Override
+    public void registerButtonClicked(UsersWindow.Event event) {
+        SwingUtilities.invokeLater(() -> {
+            final UserDialog dialog = new UserDialog(event.window, "Register user", UserDialog.Kind.REGISTER, "");
+
+            dialog.addListener(new UserDialog.Listener() {
+
+                @Override
+                public void okButtonClicked(UserDialog.Event dialogEvent) {
+                    renderer.render(usersController.register(dialogEvent.username, dialogEvent.email, currentUser.get()));
+                    refreshUsers();
+
+                    cancelButtonClicked(dialogEvent);
+                }
+
+                @Override
+                public void cancelButtonClicked(UserDialog.Event event) {
+                    event.dialog.setVisible(false);
+                    event.dialog.dispose();
+                }
+            });
+
+            dialog.setVisible(true);
+        });
+    }
+
+    @Override
+    public void removeButtonClicked(UsersWindow.Event event) {
+        SwingUtilities.invokeLater(() -> {
+            final int result = JOptionPane.showConfirmDialog(usersWindow, "Are you sure? This action cannot be undone!");
+
+            if (result == JOptionPane.YES_OPTION) {
+                renderer.render(usersController.removeUser(event.selectedUser, currentUser.get()));
+                refreshUsers();
+            }
+        });
+    }
+
+    @Override
+    public void okButtonClicked(UsersWindow.Event event) {
+        event.window.setVisible(false);
     }
 }

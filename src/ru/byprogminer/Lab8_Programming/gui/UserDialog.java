@@ -47,6 +47,9 @@ public class UserDialog extends JDialog {
         public static final Kind LOGIN = new Kind("Login", "Cancel");
         public static final Kind REGISTER = new Kind("Register", "Cancel", Field.USERNAME, Field.EMAIL);
 
+        public static final Kind USERNAME = new Kind("Ok", "Cancel", Field.USERNAME);
+        public static final Kind PASSWORD = new Kind("Ok", "Cancel", Field.PASSWORD);
+
         public final String okText;
         public final String cancelText;
         public final Field[] fields;

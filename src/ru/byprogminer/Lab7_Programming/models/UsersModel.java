@@ -4,7 +4,6 @@ import ru.byprogminer.Lab7_Programming.Credentials;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
@@ -42,7 +41,7 @@ public interface UsersModel {
     boolean setPassword(String username, String password);
     boolean setUsername(String username, String newUsername);
 
-    Map<String, String> get();
+    Set<String> get();
     String getEmail(String username);
     String getByEmail(String email);
 

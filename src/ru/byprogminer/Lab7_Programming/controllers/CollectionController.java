@@ -20,8 +20,7 @@ import java.io.FileWriter;
 import java.util.*;
 import java.util.function.Supplier;
 
-import static ru.byprogminer.Lab5_Programming.LabUtils.setOf;
-import static ru.byprogminer.Lab5_Programming.LabUtils.throwing;
+import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 public class CollectionController {
 
@@ -38,7 +37,7 @@ public class CollectionController {
             try {
                 return new AddView(collectionModel.add(livingObject, credentials.username));
             } catch (Throwable e) {
-                return new AddView(e.getLocalizedMessage());
+                return new AddView(errorMessage(e));
             }
         });
     }
@@ -52,7 +51,7 @@ public class CollectionController {
 
                 return new RemoveView(collectionModel.remove(livingObject, credentials.username));
             } catch (Throwable e) {
-                return new RemoveView(e.getLocalizedMessage());
+                return new RemoveView(errorMessage(e));
             }
         });
     }
@@ -66,7 +65,7 @@ public class CollectionController {
 
                 return new RemoveView(collectionModel.removeLower(livingObject, credentials.username));
             } catch (Throwable e) {
-                return new RemoveView(e.getLocalizedMessage());
+                return new RemoveView(errorMessage(e));
             }
         });
     }
@@ -80,7 +79,7 @@ public class CollectionController {
 
                 return new RemoveView(collectionModel.removeGreater(livingObject, credentials.username));
             } catch (Throwable e) {
-                return new RemoveView(e.getLocalizedMessage());
+                return new RemoveView(errorMessage(e));
             }
         });
     }
@@ -94,7 +93,7 @@ public class CollectionController {
 
                 return new ReplaceView(collectionModel.replaceElement(oldElement, newElement, credentials.username));
             } catch (Throwable e) {
-                return new ReplaceView(e.getLocalizedMessage());
+                return new ReplaceView(errorMessage(e));
             }
         });
     }
@@ -107,7 +106,7 @@ public class CollectionController {
             metadata.putAll(collectionModel.getMetadata());
             return new InfoView(metadata);
         } catch (Throwable e) {
-            return new InfoView(metadata, e.getLocalizedMessage());
+            return new InfoView(metadata, errorMessage(e));
         }
     }
 
@@ -115,7 +114,7 @@ public class CollectionController {
         try {
             return new ShowView(collectionModel.get());
         } catch (Throwable e) {
-            return new ShowView(e.getLocalizedMessage());
+            return new ShowView(errorMessage(e));
         }
     }
 
@@ -123,7 +122,7 @@ public class CollectionController {
         try {
             return new ShowView(collectionModel.get(count));
         } catch (Throwable e) {
-            return new ShowView(e.getLocalizedMessage());
+            return new ShowView(errorMessage(e));
         }
     }
 
@@ -144,7 +143,7 @@ public class CollectionController {
                 writer.flush();
                 return new SaveView(filename);
             } catch (Throwable e) {
-                return new SaveView(filename, e.getLocalizedMessage());
+                return new SaveView(filename, errorMessage(e));
             }
         });
     }
@@ -164,7 +163,7 @@ public class CollectionController {
                 collectionModel.load(livingObjects, reader.getMetadata());
                 return new LoadView(filename);
             } catch (Throwable e) {
-                return new LoadView(filename, e.getLocalizedMessage());
+                return new LoadView(filename, errorMessage(e));
             }
         });
     }
@@ -174,7 +173,7 @@ public class CollectionController {
             try {
                 return new ImportView(collectionModel.addAll(livingObjects, credentials.username));
             } catch (Throwable e) {
-                return new ImportView(e.getLocalizedMessage());
+                return new ImportView(errorMessage(e));
             }
         });
     }

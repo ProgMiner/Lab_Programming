@@ -6,6 +6,7 @@ import ru.byprogminer.Lab7_Programming.views.*;
 import ru.byprogminer.Lab8_Programming.gui.CollectionInfoDialog;
 import ru.byprogminer.Lab8_Programming.gui.GuiDisabler;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
+import ru.byprogminer.Lab8_Programming.gui.UsersWindow;
 
 import javax.swing.*;
 import java.util.Collections;
@@ -16,9 +17,11 @@ import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 public class GuiRenderer implements Renderer {
 
     private final MainWindow mainWindow;
+    private final UsersWindow usersWindow;
 
-    public GuiRenderer(MainWindow mainWindow) {
+    public GuiRenderer(MainWindow mainWindow, UsersWindow usersWindow) {
         this.mainWindow = mainWindow;
+        this.usersWindow = usersWindow;
     }
 
     @Override
@@ -174,14 +177,41 @@ public class GuiRenderer implements Renderer {
             }
         }
 
+        // Users views
+
+        if (view instanceof UsersView) {
+            final UsersView usersView = (UsersView) view;
+
+            SwingUtilities.invokeLater(() -> usersWindow.setUsers(usersView.users));
+        }
+
+        if (view instanceof ChangeUsernameView) {
+            final ChangeUsernameView changeUsernameView = (ChangeUsernameView) view;
+
+            if (changeUsernameView.ok) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
+                        "Username changed successfully.",
+                        "You need to logout-login if you changed username of the current user."
+                )));
+            } else {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                        "Unable to change username."));
+            }
+
+            return;
+        }
+
         if (view instanceof ChangePasswordView) {
             final ChangePasswordView changePasswordView = (ChangePasswordView) view;
 
             if (changePasswordView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow, arrayOf(
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
                         "Password changed successfully.",
-                        "You may need reset current user if you change it's password."
+                        "You need to logout-login if you changed password of the current user."
                 )));
+            } else {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                        "Unable to change password."));
             }
 
             return;
@@ -191,21 +221,33 @@ public class GuiRenderer implements Renderer {
             final RegisterView registerView = (RegisterView) view;
 
             if (view.error == null && !registerView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
                         "User " + registerView.username +  " wasn't registered."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
                         "User " + registerView.username +  " was registered successfully."));
 
                 if (registerView.password == null) {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
                             "On address " + registerView.email +  " has sent a mail with password."));
                 } else {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow, arrayOf(
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
                             "An error occurred while mail sending. Password of user " + registerView.username + ":",
                             new JTextField(registerView.password)
                     )));
                 }
+            }
+
+            return;
+        }
+
+        if (view instanceof RemoveUserView) {
+            final RemoveUserView removeUserView = (RemoveUserView) view;
+
+            if (removeUserView.ok) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf("User removed successfully.")));
+            } else {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, "Unable to remove user."));
             }
         }
     }

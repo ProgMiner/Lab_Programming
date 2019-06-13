@@ -10,7 +10,10 @@ import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -71,7 +74,7 @@ public class DatabaseUsersModel implements UsersModel {
 
         private static final String SET_USERNAME = "UPDATE \"%1$s\" SET username = ? WHERE username = ?";
 
-        private static final String GET = "SELECT username, email FROM \"%1$s\"";
+        private static final String GET = "SELECT username FROM \"%1$s\"";
 
         private static final String GET_EMAIL = "SELECT email FROM \"%1$s\" WHERE username = ?";
 
@@ -183,6 +186,10 @@ public class DatabaseUsersModel implements UsersModel {
 
     @Override
     public boolean remove(String username) {
+        if (DEFAULT_USER.equals(username)) {
+            return false;
+        }
+
         return template(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("remove", throwing().function(s ->
@@ -196,6 +203,10 @@ public class DatabaseUsersModel implements UsersModel {
 
     @Override
     public boolean setPassword(String username, String password) {
+        if (DEFAULT_USER.equals(username)) {
+            return false;
+        }
+
         return templateTransaction(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("setPassword", throwing().function(s ->
@@ -213,6 +224,10 @@ public class DatabaseUsersModel implements UsersModel {
 
     @Override
     public boolean setUsername(String username, String newUsername) {
+        if (DEFAULT_USER.equals(username)) {
+            return false;
+        }
+
         return templateTransaction(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("setUsername", throwing().function(s ->
@@ -228,7 +243,7 @@ public class DatabaseUsersModel implements UsersModel {
     }
 
     @Override
-    public Map<String, String> get() {
+    public Set<String> get() {
         return template(() -> {
             final PreparedStatement preparedStatement = throwing().unwrap(SQLException.class, () ->
                     statements.computeIfAbsent("get", throwing().function(s ->
@@ -236,8 +251,7 @@ public class DatabaseUsersModel implements UsersModel {
                                     usersTableName)))));
 
             return mapResultSet(preparedStatement.executeQuery(), row ->
-                    new HashMap.SimpleImmutableEntry<>(row.getString(1), row.getString(2)))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    row.getString(1)).collect(Collectors.toSet());
         });
     }
 
