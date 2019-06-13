@@ -144,7 +144,6 @@ public class UserDialog extends JDialog {
         }
 
         contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
-        setContentPane(contentPane);
 
         final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ENTER_ACTION);
@@ -165,10 +164,11 @@ public class UserDialog extends JDialog {
                 sendEvent(Listener::cancelButtonClicked, new Event(UserDialog.this, null, null, null));
             }
         });
-        setLocationRelativeTo(parentWindow);
+        setContentPane(contentPane);
         pack();
 
         setMinimumSize(getSize());
+        setLocationRelativeTo(null);
     }
 
     public void addListener(Listener listener) {

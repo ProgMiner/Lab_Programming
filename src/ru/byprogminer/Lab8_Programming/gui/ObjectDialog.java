@@ -255,7 +255,6 @@ public class ObjectDialog<T extends Object> extends JDialog {
         }
 
         contentPane.setBorder(BorderFactory.createEmptyBorder(MARGIN, MARGIN, MARGIN, MARGIN));
-        setContentPane(contentPane);
 
         final InputMap inputMap = contentPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), ENTER_ACTION);
@@ -276,10 +275,11 @@ public class ObjectDialog<T extends Object> extends JDialog {
                 sendEvent(Listener::cancelButtonClicked, new Event<>(ObjectDialog.this, null));
             }
         });
-        setLocationRelativeTo(parentWindow);
+        setContentPane(contentPane);
         pack();
 
         setMinimumSize(getSize());
+        setLocationRelativeTo(null);
     }
 
     public void addListener(Listener<T> listener) {

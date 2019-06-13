@@ -235,7 +235,6 @@ public class ServerMain {
             final IpAddressDialog serverStartingDialog = new IpAddressDialog(mainWindow, APP_NAME, IpAddressDialog
                     .Kind.SERVER_STARTING, "0.0.0.0", (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
 
-            serverStartingDialog.setLocationRelativeTo(null);
             serverStartingDialog.addListener(new IpAddressDialog.Listener() {
 
                 @Override

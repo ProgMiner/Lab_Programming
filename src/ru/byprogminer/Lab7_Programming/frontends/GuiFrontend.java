@@ -10,6 +10,7 @@ import ru.byprogminer.Lab7_Programming.controllers.UsersController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab7_Programming.views.CheckPasswordView;
+import ru.byprogminer.Lab8_Programming.gui.AboutDialog;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 import ru.byprogminer.Lab8_Programming.gui.ObjectDialog;
 import ru.byprogminer.Lab8_Programming.gui.UserDialog;
@@ -135,7 +136,13 @@ public class GuiFrontend implements Frontend, MainWindow.Listener {
 
     @Override
     public void mainAboutMenuItemClicked(MainWindow.Event event) {
-        // TODO
+        SwingUtilities.invokeLater(() -> {
+            final AboutDialog dialog = new AboutDialog(event.window, "About");
+
+            dialog.setTitle(ServerMain.APP_NAME);
+            dialog.setContent("Oaoaoaoaoa");
+            dialog.setVisible(true);
+        });
     }
 
     @Override

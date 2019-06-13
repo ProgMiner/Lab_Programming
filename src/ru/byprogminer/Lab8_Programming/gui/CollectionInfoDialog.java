@@ -51,10 +51,10 @@ public class CollectionInfoDialog extends JDialog {
             }
         });
         setContentPane(contentPane);
-        setLocationRelativeTo(parentWindow);
         pack();
 
         setMinimumSize(getSize());
+        setLocationRelativeTo(null);
     }
 
     public void setMetadata(Map<String, String> metadata) {

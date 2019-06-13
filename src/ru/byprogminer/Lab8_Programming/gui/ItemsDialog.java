@@ -116,10 +116,10 @@ public class ItemsDialog extends JDialog {
             }
         });
         setContentPane(contentPane);
-        setLocationRelativeTo(parentWindow);
         pack();
 
         setMinimumSize(getSize());
+        setLocationRelativeTo(null);
     }
 
     public void addListener(Listener listener) {

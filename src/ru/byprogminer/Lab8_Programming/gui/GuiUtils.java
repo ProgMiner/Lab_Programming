@@ -28,6 +28,8 @@ public class GuiUtils {
     public static final Border DEFAULT_MARGIN_BORDER =
             createMarginBorder(DEFAULT_MARGIN, BorderFactory::createEmptyBorder);
 
+    public static final Color TRANSPARENT_COLOR = new Color(0, 0, 0, 0);
+
     static {
         try {
             DEFAULT_FONT = Font
@@ -78,5 +80,21 @@ public class GuiUtils {
                 return dimension;
             }
         });
+    }
+
+    public static JPanel makeBackgroundPanel(Image background) {
+        if (background == null) {
+            return new JPanel();
+        }
+
+        return new JPanel() {
+
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                super.paintComponent(graphics);
+
+                graphics.drawImage(background, 0, 0, getWidth(), getHeight(), null);
+            }
+        };
     }
 }
