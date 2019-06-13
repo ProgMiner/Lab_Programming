@@ -14,9 +14,11 @@ import java.awt.image.BufferedImage;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -75,31 +77,31 @@ public final class LabUtils {
         }
     }
 
-    public static LocalDateTime parseLocalDateTime(String string) throws Exception {
+    public static LocalDateTime parseLocalDateTime(String string) throws DateTimeParseException {
         if (string == null || string.trim().isEmpty()) {
             return LocalDateTime.now();
         }
 
         LocalDateTime localDateTime = null;
-        Exception exception = null;
+        DateTimeParseException exception = null;
 
         try {
             localDateTime = LocalDateTime.parse(string, Object.DATE_TIME_FORMATTER);
-        } catch (Exception e) {
+        } catch (DateTimeParseException e) {
             exception = e;
         }
 
         if (localDateTime == null) {
             try {
                 localDateTime = LocalDateTime.parse(string);
-            } catch (Throwable ignored) {}
+            } catch (DateTimeParseException ignored) {}
         }
 
         if (localDateTime == null) {
             try {
                 localDateTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(Long
                         .parseLong(string)), ZoneId.systemDefault());
-            } catch (Throwable ignored) {}
+            } catch (NumberFormatException | DateTimeException | ArithmeticException ignored) {}
         }
 
         if (localDateTime == null) {

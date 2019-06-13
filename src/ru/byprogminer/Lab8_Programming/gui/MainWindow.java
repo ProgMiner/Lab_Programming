@@ -14,7 +14,7 @@ import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -468,21 +468,11 @@ public class MainWindow extends JFrame {
         }
     }
 
-    private LivingObject getElementFromRow(int row) {
-        final LocalDateTime creatingTime;
-
-        try {
-            creatingTime = parseLocalDateTime((String) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_CREATING_TIME_COLUMN));
-        } catch (Exception e) {
-            log.log(Level.SEVERE, "bad creating time format", e);
-            JOptionPane.showMessageDialog(MainWindow.this, arrayOf("Bad creating time format", e.getLocalizedMessage()));
-            return null;
-        }
-
+    private LivingObject getElementFromRow(int row) throws DateTimeParseException {
         final LivingObject element = new LivingObject(
                 (String) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_NAME_COLUMN),
                 (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_VOLUME_COLUMN),
-                creatingTime,
+                parseLocalDateTime((String) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_CREATING_TIME_COLUMN)),
                 (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_X_COLUMN),
                 (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_Y_COLUMN),
                 (Double) mapListListTableModel.getValueAt(row, MAP_LIST_LIST_Z_COLUMN)

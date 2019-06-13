@@ -11,6 +11,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -365,7 +366,7 @@ public class ObjectDialog<T extends Object> extends JDialog {
 
                 sendEvent(handler, new Event<>(this, (T) object));
             }
-        } catch (Exception e) {
+        } catch (DateTimeParseException e) {
             JOptionPane.showMessageDialog(this, arrayOf("Bad object format", e.getLocalizedMessage()));
         }
     }
