@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import static ru.byprogminer.Lab5_Programming.LabUtils.*;
 
 @SuppressWarnings("FieldCanBeLocal")
-public class MainWindow extends JFrame {
+public class MainWindow extends JFrame implements ElementsMap.Listener {
 
     public interface Listener {
 
@@ -279,6 +279,7 @@ public class MainWindow extends JFrame {
         mainMenuBar.add(mainAboutMenuItem);
         setJMenuBar(mainMenuBar);
 
+        mapListMapElementsMap.addListener(this);
         mapListMapElementsMap.setFont(GuiUtils.DEFAULT_FONT);
         mapListTabbedPane.add(mapListMapElementsMap, "Map");
 
@@ -438,7 +439,7 @@ public class MainWindow extends JFrame {
     public void setElements(Set<LivingObject> elements) {
         deselectElement();
 
-        // TODO update map
+        mapListMapElementsMap.setElements(elements);
 
         listElements.clear();
         elementsListIndexes.clear();
@@ -561,7 +562,7 @@ public class MainWindow extends JFrame {
     }
 
     private void deselectElement() {
-        // TODO deselect on map
+        mapListMapElementsMap.deselectElement();
 
         final boolean pmlltc = programmaticallyMapListListTableChange.get();
         programmaticallyMapListListTableChange.set(true);
@@ -572,7 +573,7 @@ public class MainWindow extends JFrame {
     }
 
     private void selectElement(LivingObject element) {
-        // TODO select on map
+        mapListMapElementsMap.selectElement(element);
 
         final boolean pmlltc = programmaticallyMapListListTableChange.get();
         programmaticallyMapListListTableChange.set(true);
@@ -586,7 +587,7 @@ public class MainWindow extends JFrame {
     private void selectElement(int listIndex) {
         final LivingObject element = listElements.get(listIndex);
 
-        // TODO select on map
+        mapListMapElementsMap.selectElement(element);
 
         final boolean pmlltc = programmaticallyMapListListTableChange.get();
         programmaticallyMapListListTableChange.set(true);
@@ -601,7 +602,7 @@ public class MainWindow extends JFrame {
         elementsListIndexes.put(newElement, listIndex);
         listElements.put(listIndex, newElement);
 
-        // TODO change on map
+        mapListMapElementsMap.setElements(elementsListIndexes.keySet());
 
         final boolean pmlltc = programmaticallyMapListListTableChange.get();
         programmaticallyMapListListTableChange.set(true);
@@ -617,6 +618,16 @@ public class MainWindow extends JFrame {
         programmaticallyMapListListTableChange.set(pmlltc);
 
         selectElement(newElement);
+    }
+
+    @Override
+    public void elementSelected(ElementsMap.Event e) {
+        selectElement(e.selectedElement);
+    }
+
+    @Override
+    public void elementDeselected(ElementsMap.Event e) {
+        deselectElement();
     }
 
     private void sendEvent(BiConsumer<Listener, Event> handler) {

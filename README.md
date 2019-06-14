@@ -5,13 +5,11 @@
   - Implement GUI
     - [X] Server starting dialog
     - [ ] Main window
-      - [ ] Map
+      - [X] Map
       - [ ] List
         - [X] Items dialog
         - [ ] Sort and filter
-      - [ ] Login
-        - [ ] Password checking packet
-        - [X] Login dialog
+      - [X] Login
       - [X] Collection information dialog
       - [X] Element dialog
     - [X] Users management (removing/etc)
