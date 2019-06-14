@@ -1,5 +1,7 @@
 package ru.byprogminer.Lab7_Programming;
 
+import java.util.Objects;
+
 public interface Renderer {
 
     interface Listener {
@@ -23,8 +25,8 @@ public interface Renderer {
         public final View view;
 
         protected Event(Renderer renderer, View view) {
-            this.renderer = renderer;
-            this.view = view;
+            this.renderer = Objects.requireNonNull(renderer);
+            this.view = Objects.requireNonNull(view);
         }
     }
 

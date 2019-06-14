@@ -264,8 +264,8 @@ public class ClientMain {
         try {
             connect();
         } catch (Throwable e) {
-            log.log(Level.SEVERE, "unable to connect to server", e);
-            System.err.println("Unable to connect to server. Check logs for details or try again.");
+            log.log(Level.SEVERE, "unable to connect to the server", e);
+            System.err.println("Unable to connect to the server. Check logs for details or try again.");
             return Status.CONNECT_ERROR;
         }
 

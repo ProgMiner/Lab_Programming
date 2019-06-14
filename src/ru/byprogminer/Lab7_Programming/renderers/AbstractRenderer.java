@@ -30,6 +30,10 @@ public abstract class AbstractRenderer implements Renderer {
 
     @Override
     public final void render(View view) {
+        if (view == null) {
+            return;
+        }
+
         sendEvent(Listener::viewRendering, view);
 
         doRender(view);

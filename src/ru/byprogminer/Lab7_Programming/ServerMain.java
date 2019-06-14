@@ -55,14 +55,17 @@ public class ServerMain {
     public static final String APP_NAME = "Lab8_Programming";
 
     private static final String USAGE = "" +
-            "Usage: java -jar lab7_server.jar [--gui] [port]\n" +
+            "Usage: java -jar lab7_server.jar [--gui] [port] [address]\n" +
             "  - --gui\n" +
-            "    Option for enable the GUI" +
+            "    Option for enable the GUI\n" +
             "  - port\n" +
-            "    Not required port number for opened server";
+            "    Not required port number for opened server\n" +
+            "  - address\n" +
+            "    Not required address for opened server";
 
-    private static final int DEFAULT_SERVER_PORT = 3565;
     private static final String DB_PROPERTIES = "/db.properties";
+    private static final String DEFAULT_SERVER_ADDRESS = "0.0.0.0";
+    private static final int DEFAULT_SERVER_PORT = 3565;
 
     private static final Scanner stdinScanner = new Scanner(System.in);
     private static final Logger log = Loggers.getClassLogger(ServerMain.class);
@@ -103,6 +106,7 @@ public class ServerMain {
 
         try {
             ret.put("port", validatePort(args[pointer]));
+            ++pointer;
         } catch (Throwable e) {
             log.log(Level.SEVERE, "bad port provided: " + args[pointer], e);
             System.err.printf("Bad port provided: %s.\n", args[pointer]);
@@ -111,6 +115,11 @@ public class ServerMain {
             System.exit(Status.BAD_PORT_PROVIDED);
         }
 
+        if (args.length < pointer + 1) {
+            return ret;
+        }
+
+        ret.put("hostname", args[pointer]);
         return ret;
     }
 
@@ -167,11 +176,11 @@ public class ServerMain {
         if ((Boolean) args.getOrDefault("gui", false)) {
             return guiMain(args, usersController, collectionController);
         } else {
-            return noGuiMain(args, usersController, collectionController);
+            return cuiMain(args, usersController, collectionController);
         }
     }
 
-    private static int noGuiMain(
+    private static int cuiMain(
             Map<String, Object> args,
             UsersController usersController,
             CollectionController collectionController
@@ -183,10 +192,11 @@ public class ServerMain {
             RemoteFrontend tmpRemoteFrontend = null;
 
             try {
-                final int port = (int) args.getOrDefault("port", 0);
-
                 final DatagramChannel channel = DatagramChannel.open();
-                channel.bind(new InetSocketAddress(port));
+                channel.bind(new InetSocketAddress(
+                        (String) args.getOrDefault("hostname", DEFAULT_SERVER_ADDRESS),
+                        (int) args.getOrDefault("port", DEFAULT_SERVER_PORT)
+                ));
 
                 final UdpServerSocket<?> serverSocket = new ChannelUdpServerSocket<>(channel, PacketUtils.OPTIMAL_PACKET_SIZE);
                 tmpRemoteFrontend = new RemoteFrontend(serverSocket, usersController, collectionController);
@@ -237,8 +247,9 @@ public class ServerMain {
 
         final AtomicReference<IpAddressDialog> serverStartingDialogReference = new AtomicReference<>();
         SwingUtilities.invokeLater(() -> {
-            final IpAddressDialog serverStartingDialog = new IpAddressDialog(mainWindow, APP_NAME, IpAddressDialog
-                    .Kind.SERVER_STARTING, "0.0.0.0", (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
+            final IpAddressDialog serverStartingDialog = new IpAddressDialog(mainWindow, APP_NAME,
+                    IpAddressDialog.Kind.SERVER_STARTING,(String) args.getOrDefault("address", DEFAULT_SERVER_ADDRESS),
+                    (Integer) args.getOrDefault("port", DEFAULT_SERVER_PORT));
 
             serverStartingDialog.addListener(new IpAddressDialog.Listener() {
 

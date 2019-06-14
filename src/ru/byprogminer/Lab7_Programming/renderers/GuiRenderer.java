@@ -1,17 +1,16 @@
 package ru.byprogminer.Lab7_Programming.renderers;
 
+import ru.byprogminer.Lab3_Programming.LivingObject;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.views.*;
-import ru.byprogminer.Lab8_Programming.gui.CollectionInfoDialog;
-import ru.byprogminer.Lab8_Programming.gui.GuiDisabler;
-import ru.byprogminer.Lab8_Programming.gui.MainWindow;
-import ru.byprogminer.Lab8_Programming.gui.UsersWindow;
+import ru.byprogminer.Lab8_Programming.gui.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
@@ -28,6 +27,43 @@ public class GuiRenderer extends AbstractRenderer {
 
     public void setCurrentDialogWindow(Window currentDialogWindow) {
         this.currentDialogWindow = currentDialogWindow;
+    }
+
+    public static LivingObject requestElement(Window parentWindow, String title, LivingObject selectedElement) {
+        final AtomicReference<LivingObject> elementReference = new AtomicReference<>();
+
+        final AtomicReference<ObjectDialog<LivingObject>> dialogReference = new AtomicReference<>();
+        SwingUtilities.invokeLater(() -> {
+            final ObjectDialog<LivingObject> dialog = new ObjectDialog<>(parentWindow, title, ObjectDialog.Kind.LIVING_OBJECT, selectedElement);
+            dialog.addListener(new ObjectDialog.Listener<LivingObject>() {
+
+                @Override
+                public void okButtonClicked(ObjectDialog.Event<LivingObject> event) {
+                    elementReference.set(event.object);
+                    cancelButtonClicked(event);
+                }
+
+                @Override
+                public void cancelButtonClicked(ObjectDialog.Event<LivingObject> event) {
+                    dialog.setVisible(false);
+                    dialog.dispose();
+                }
+            });
+
+            dialog.setVisible(true);
+            dialogReference.set(dialog);
+        });
+
+        ObjectDialog<LivingObject> dialog;
+        while ((dialog = dialogReference.get()) == null) {
+            Thread.yield();
+        }
+
+        while (dialog.isVisible()) {
+            Thread.yield();
+        }
+
+        return elementReference.get();
     }
 
     @Override

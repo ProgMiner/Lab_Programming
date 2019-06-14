@@ -30,6 +30,10 @@ public class ChannelUdpSocket<D extends DatagramChannel> extends UdpSocket<D> {
 
     @Override
     protected void sendDatagram(ByteBuffer content) throws IOException {
+        if (remote == null) {
+            return;
+        }
+
         device.send(content, remote);
 
         log.info("sent datagram to " + remote);

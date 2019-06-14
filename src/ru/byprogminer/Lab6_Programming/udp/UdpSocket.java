@@ -376,7 +376,7 @@ public abstract class UdpSocket<D> implements Closeable {
 
         try {
             sendDatagram(packetUtils.writePacket(new Packet(Action.FINISH, previous.get())));
-        } catch (IOException e) {
+        } catch (Throwable e) {
             log.log(Level.WARNING, "unable to send FINISH packet", e);
         }
 

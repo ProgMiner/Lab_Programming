@@ -31,6 +31,10 @@ public class SocketUdpSocket<D extends DatagramSocket> extends UdpSocket<D> {
 
     @Override
     protected void sendDatagram(ByteBuffer content) throws IOException {
+        if (remote == null) {
+            return;
+        }
+
         byte[] bufferArray = new byte[content.remaining()];
         content.get(bufferArray);
 

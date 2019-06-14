@@ -17,7 +17,7 @@
     - [X] Users management (removing/etc)
     - [X] Menu bar
     - [X] Views handling
-  - [ ] Connect dialog
+  - [X] Connect dialog
   - [ ] L10n and i18n
   - [ ] Implement all GUI abilities in CUI
   - [ ] ...

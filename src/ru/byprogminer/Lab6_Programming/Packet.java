@@ -34,6 +34,40 @@ public abstract class Packet implements Serializable {
             }
         }
 
+        private static abstract class _UsernameContainer extends Request {
+
+            public final String username;
+
+            public _UsernameContainer(String username, Credentials credentials) {
+                super(credentials);
+
+                this.username = Objects.requireNonNull(username);
+            }
+
+            public _UsernameContainer(Credentials credentials) {
+                super(credentials);
+
+                this.username = null;
+            }
+        }
+
+        private static abstract class _UsernamePermissionContainer extends _UsernameContainer {
+
+            public final String permission;
+
+            public _UsernamePermissionContainer(String permission, String username, Credentials credentials) {
+                super(username, credentials);
+
+                this.permission = Objects.requireNonNull(permission);
+            }
+
+            public _UsernamePermissionContainer(String permission, Credentials credentials) {
+                super(credentials);
+
+                this.permission = permission;
+            }
+        }
+
         public static final class Add extends _ElementContainer {
 
             public Add(LivingObject element, Credentials credentials) {
@@ -59,6 +93,17 @@ public abstract class Packet implements Serializable {
 
             public RemoveGreater(LivingObject element, Credentials credentials) {
                 super(element, credentials);
+            }
+        }
+
+        public static final class ReplaceElement extends _ElementContainer {
+
+            public final LivingObject newElement;
+
+            public ReplaceElement(LivingObject element, LivingObject newElement, Credentials credentials) {
+                super(element, credentials);
+
+                this.newElement = newElement;
             }
         }
 
@@ -112,36 +157,106 @@ public abstract class Packet implements Serializable {
             }
         }
 
-        public static final class ChangePassword extends Request {
+        public static final class CheckPassword extends Request {
 
-            public final String username;
+            public CheckPassword(Credentials credentials) {
+                super(credentials);
+            }
+        }
+
+        public static final class GetUsers extends Request {
+
+            public GetUsers(Credentials credentials) {
+                super(credentials);
+            }
+        }
+
+        public static final class ChangeUsername extends _UsernameContainer {
+
+            public final String newUsername;
+
+            public ChangeUsername(String username, String newUsername, Credentials credentials) {
+                super(username, credentials);
+
+                this.newUsername = Objects.requireNonNull(newUsername);
+            }
+
+            public ChangeUsername(String newUsername, Credentials credentials) {
+                super(credentials);
+
+                this.newUsername = Objects.requireNonNull(newUsername);
+            }
+        }
+
+        public static final class ChangePassword extends _UsernameContainer {
+
             public final String password;
 
             public ChangePassword(String username, String password, Credentials credentials) {
-                super(credentials);
+                super(username, credentials);
 
-                this.username = Objects.requireNonNull(username);
                 this.password = Objects.requireNonNull(password);
             }
 
             public ChangePassword(String password, Credentials credentials) {
                 super(credentials);
 
-                this.username = null;
                 this.password = Objects.requireNonNull(password);
             }
         }
 
-        public static final class Register extends Request {
+        public static final class Register extends _UsernameContainer {
 
-            public final String username;
             public final String email;
 
             public Register(String username, String email, Credentials credentials) {
-                super(credentials);
+                super(username, credentials);
 
-                this.username = Objects.requireNonNull(username);
                 this.email = Objects.requireNonNull(email);
+            }
+        }
+
+        public static final class RemoveUser extends _UsernameContainer {
+
+            public RemoveUser(String username, Credentials credentials) {
+                super(username, credentials);
+            }
+
+            public RemoveUser(Credentials credentials) {
+                super(credentials);
+            }
+        }
+
+        public static final class GetPermissions extends _UsernameContainer {
+
+            public GetPermissions(String username, Credentials credentials) {
+                super(username, credentials);
+            }
+
+            public GetPermissions(Credentials credentials) {
+                super(credentials);
+            }
+        }
+
+        public static final class GivePermissions extends _UsernamePermissionContainer {
+
+            public GivePermissions(String permission, String username, Credentials credentials) {
+                super(permission, username, credentials);
+            }
+
+            public GivePermissions(String permission, Credentials credentials) {
+                super(permission, credentials);
+            }
+        }
+
+        public static final class TakePermission extends _UsernamePermissionContainer {
+
+            public TakePermission(String permission, String username, Credentials credentials) {
+                super(permission, username, credentials);
+            }
+
+            public TakePermission(String permission, Credentials credentials) {
+                super(permission, credentials);
             }
         }
 
