@@ -87,6 +87,14 @@ public class RemoteFrontend implements Frontend {
                                     removeGreaterRequest.element,
                                     removeGreaterRequest.credentials
                             );
+                        } else if (request instanceof Request.ReplaceElement) {
+                            final Request.ReplaceElement replaceElementRequest = (Request.ReplaceElement) request;
+
+                            view = collectionController.replaceElement(
+                                    replaceElementRequest.element,
+                                    replaceElementRequest.newElement,
+                                    replaceElementRequest.credentials
+                            );
                         } else if (request instanceof Request.Info) {
                             view = collectionController.info();
                         } else if (request instanceof Request.ShowAll) {
@@ -107,6 +115,15 @@ public class RemoteFrontend implements Frontend {
                             final Request.Import importRequest = (Request.Import) request;
 
                             view = collectionController.importObjects(importRequest.content, importRequest.credentials);
+                        } else if (request instanceof Request.CheckPassword) {
+                            view = usersController.checkPassword(request.credentials);
+                        } else if (request instanceof Request.GetUsers) {
+                            view = usersController.get();
+                        } else if (request instanceof Request.ChangeUsername) {
+                            final Request.ChangeUsername changeUsernameRequest = (Request.ChangeUsername) request;
+
+                            view = usersController.changeUsername(changeUsernameRequest.username,
+                                    changeUsernameRequest.newUsername, changeUsernameRequest.credentials);
                         } else if (request instanceof Request.ChangePassword) {
                             final Request.ChangePassword changePasswordRequest = (Request.ChangePassword) request;
 
@@ -117,6 +134,25 @@ public class RemoteFrontend implements Frontend {
 
                             view = usersController.register(registerRequest.username,
                                     registerRequest.email, registerRequest.credentials);
+                        } else if (request instanceof Request.RemoveUser) {
+                            final Request.RemoveUser removeUserRequest = (Request.RemoveUser) request;
+
+                            view = usersController.removeUser(removeUserRequest.username, removeUserRequest.credentials);
+                        } else if (request instanceof Request.GetPermissions) {
+                            final Request.GetPermissions getPermissionsRequest = (Request.GetPermissions) request;
+
+                            view = usersController.getPermissions(getPermissionsRequest.username,
+                                    getPermissionsRequest.credentials);
+                        } else if (request instanceof Request.GivePermissions) {
+                            final Request.GivePermissions givePermissionsRequest = (Request.GivePermissions) request;
+
+                            view = usersController.givePermission(givePermissionsRequest.username,
+                                    givePermissionsRequest.permission, givePermissionsRequest.credentials);
+                        } else if (request instanceof Request.TakePermission) {
+                            final Request.TakePermission takePermissionsRequest = (Request.TakePermission) request;
+
+                            view = usersController.takePermission(takePermissionsRequest.username,
+                                    takePermissionsRequest.permission, takePermissionsRequest.credentials);
                         } else {
                             view = null;
                         }
