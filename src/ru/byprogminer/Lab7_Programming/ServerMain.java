@@ -13,6 +13,7 @@ import ru.byprogminer.Lab7_Programming.models.CollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseCollectionModel;
 import ru.byprogminer.Lab7_Programming.models.DatabaseUsersModel;
 import ru.byprogminer.Lab7_Programming.models.UsersModel;
+import ru.byprogminer.Lab8_Programming.Translations;
 import ru.byprogminer.Lab8_Programming.gui.GuiDisabler;
 import ru.byprogminer.Lab8_Programming.gui.IpAddressDialog;
 import ru.byprogminer.Lab8_Programming.gui.MainWindow;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 import static ru.byprogminer.Lab5_Programming.LabUtils.validatePort;
@@ -229,6 +231,9 @@ public class ServerMain {
         final Frontend guiFrontend = new GuiFrontend(mainWindow, collectionController, usersController);
         final AtomicReference<Frontend> remoteFrontend = new AtomicReference<>();
         final AtomicBoolean exec = new AtomicBoolean();
+
+        mainWindow.setLanguages(Translations.AVAILABLE_LANGUAGES.parallelStream()
+                .map(locale -> locale.getDisplayName(locale)).collect(Collectors.toList()));
 
         final AtomicReference<IpAddressDialog> serverStartingDialogReference = new AtomicReference<>();
         SwingUtilities.invokeLater(() -> {

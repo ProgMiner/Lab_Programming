@@ -421,6 +421,10 @@ public class MainWindow extends JFrame {
         }
 
         disabler.revert();
+        if (!menuItems.isEmpty()) {
+            menuItems.get(0).setSelected(true);
+            sendEvent(Listener::mainLanguageMenuItemClicked);
+        }
     }
 
     public void addListener(Listener listener) {
