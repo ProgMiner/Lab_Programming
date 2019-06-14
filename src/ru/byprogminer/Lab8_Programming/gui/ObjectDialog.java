@@ -30,6 +30,15 @@ public class ObjectDialog<T extends Object> extends JDialog {
         void cancelButtonClicked(Event<T> event);
     }
 
+    public static abstract class Adapter<T extends Object> implements Listener<T> {
+
+        @Override
+        public void okButtonClicked(Event<T> event) {}
+
+        @Override
+        public void cancelButtonClicked(Event<T> event) {}
+    }
+
     public static final class Event<T extends Object> {
 
         public final ObjectDialog dialog;

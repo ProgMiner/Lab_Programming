@@ -1,6 +1,5 @@
 package ru.byprogminer.Lab7_Programming.renderers;
 
-import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.views.*;
 import ru.byprogminer.Lab8_Programming.gui.CollectionInfoDialog;
@@ -9,42 +8,49 @@ import ru.byprogminer.Lab8_Programming.gui.MainWindow;
 import ru.byprogminer.Lab8_Programming.gui.UsersWindow;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Objects;
 
 import static ru.byprogminer.Lab5_Programming.LabUtils.arrayOf;
 
-public class GuiRenderer implements Renderer {
+public class GuiRenderer extends AbstractRenderer {
 
     private final MainWindow mainWindow;
     private final UsersWindow usersWindow;
+    private Window currentDialogWindow;
 
     public GuiRenderer(MainWindow mainWindow, UsersWindow usersWindow) {
-        this.mainWindow = mainWindow;
-        this.usersWindow = usersWindow;
+        currentDialogWindow = this.mainWindow = Objects.requireNonNull(mainWindow);
+        this.usersWindow = Objects.requireNonNull(usersWindow);
+    }
+
+    public void setCurrentDialogWindow(Window currentDialogWindow) {
+        this.currentDialogWindow = currentDialogWindow;
     }
 
     @Override
-    public void render(View view) {
+    protected void doRender(View view) {
         if (view.error != null) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                     view.error + ". Please try again or consult a specialist."));
         }
 
         if (view instanceof NotLoggedView) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                     "You are not logged in."));
             return;
         }
 
         if (view instanceof WrongCredentialsView) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                     "Wrong password or user is not exists."));
             return;
         }
 
         if (view instanceof NotPermittedView) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                     "You don't have permission."));
             return;
         }
@@ -53,7 +59,7 @@ public class GuiRenderer implements Renderer {
             final InfoView infoView = (InfoView) view;
 
             SwingUtilities.invokeLater(() -> {
-                final CollectionInfoDialog dialog = new CollectionInfoDialog(mainWindow, "Collection info");
+                final CollectionInfoDialog dialog = new CollectionInfoDialog(currentDialogWindow, "Collection info");
                 dialog.setMetadata(infoView.metadata);
                 dialog.setVisible(true);
             });
@@ -78,13 +84,13 @@ public class GuiRenderer implements Renderer {
             final ModifyView modifyView = (ModifyView) view;
 
             if (view.error == null && modifyView.affectedRows == 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "No one elements added."));
             } else if (modifyView.affectedRows == 1) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "One element added."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         modifyView.affectedRows + " elements added."));
             }
 
@@ -95,13 +101,13 @@ public class GuiRenderer implements Renderer {
             final ModifyView modifyView = (ModifyView) view;
 
             if (view.error == null && modifyView.affectedRows == 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "No one elements removed."));
             } else if (modifyView.affectedRows == 1) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "One element removed."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         modifyView.affectedRows + " elements removed."));
             }
 
@@ -112,13 +118,13 @@ public class GuiRenderer implements Renderer {
             final ModifyView modifyView = (ModifyView) view;
 
             if (view.error == null && modifyView.affectedRows == 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "No one elements changed."));
             } else if (modifyView.affectedRows == 1) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "One element changed."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         modifyView.affectedRows + " elements changed."));
             }
 
@@ -129,13 +135,13 @@ public class GuiRenderer implements Renderer {
             final ModifyView modifyView = (ModifyView) view;
 
             if (view.error == null && modifyView.affectedRows == 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "No one elements imported."));
             } else if (modifyView.affectedRows == 1) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "One element imported."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         modifyView.affectedRows + " elements imported."));
             }
 
@@ -146,13 +152,13 @@ public class GuiRenderer implements Renderer {
             final ModifyView modifyView = (ModifyView) view;
 
             if (view.error == null && modifyView.affectedRows == 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "No one elements affected."));
             } else if (modifyView.affectedRows == 1) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "One element affected."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         modifyView.affectedRows + " elements affected."));
             }
 
@@ -163,7 +169,7 @@ public class GuiRenderer implements Renderer {
             if (view instanceof LoadView) {
                 final LoadView loadView = (LoadView) view;
 
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "Loaded from " + loadView.filename + "."));
                 return;
             }
@@ -171,7 +177,7 @@ public class GuiRenderer implements Renderer {
             if (view instanceof SaveView) {
                 final SaveView saveView = (SaveView) view;
 
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(mainWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "Saved to " + saveView.filename + "."));
                 return;
             }
@@ -194,12 +200,12 @@ public class GuiRenderer implements Renderer {
             final ChangeUsernameView changeUsernameView = (ChangeUsernameView) view;
 
             if (changeUsernameView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow, arrayOf(
                         "Username changed successfully.",
                         "You need to logout-login if you changed username of the current user."
                 )));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "Unable to change username."));
             }
 
@@ -210,12 +216,12 @@ public class GuiRenderer implements Renderer {
             final ChangePasswordView changePasswordView = (ChangePasswordView) view;
 
             if (changePasswordView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow, arrayOf(
                         "Password changed successfully.",
                         "You need to logout-login if you changed password of the current user."
                 )));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "Unable to change password."));
             }
 
@@ -226,17 +232,17 @@ public class GuiRenderer implements Renderer {
             final RegisterView registerView = (RegisterView) view;
 
             if (view.error == null && !registerView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "User " + registerView.username +  " wasn't registered."));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                         "User " + registerView.username +  " was registered successfully."));
 
                 if (registerView.password == null) {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow,
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow,
                             "On address " + registerView.email +  " has sent a mail with password."));
                 } else {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf(
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow, arrayOf(
                             "An error occurred while mail sending. Password of user " + registerView.username + ":",
                             new JTextField(registerView.password)
                     )));
@@ -250,9 +256,9 @@ public class GuiRenderer implements Renderer {
             final RemoveUserView removeUserView = (RemoveUserView) view;
 
             if (removeUserView.ok) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, arrayOf("User removed successfully.")));
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow, arrayOf("User removed successfully.")));
             } else {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(usersWindow, "Unable to remove user."));
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(currentDialogWindow, "Unable to remove user."));
             }
         }
     }

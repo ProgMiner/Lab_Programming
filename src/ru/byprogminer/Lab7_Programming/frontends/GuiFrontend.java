@@ -10,13 +10,13 @@ import ru.byprogminer.Lab7_Programming.controllers.UsersController;
 import ru.byprogminer.Lab7_Programming.csv.CsvLivingObjectReader;
 import ru.byprogminer.Lab7_Programming.renderers.GuiRenderer;
 import ru.byprogminer.Lab7_Programming.views.CheckPasswordView;
+import ru.byprogminer.Lab7_Programming.views.PermissionsView;
 import ru.byprogminer.Lab8_Programming.gui.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.Listener {
@@ -25,7 +25,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
     private final UsersWindow usersWindow;
     private final CollectionController collectionController;
     private final UsersController usersController;
-    private final Renderer renderer;
+    private final GuiRenderer renderer;
 
     private final CurrentUser currentUser = new CurrentUser();
     private volatile String previousUser = "";
@@ -42,10 +42,12 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
     }
 
     private void refreshElements() {
+        renderer.setCurrentDialogWindow(mainWindow);
         renderer.render(collectionController.show());
     }
 
     private void refreshUsers() {
+        renderer.setCurrentDialogWindow(usersWindow);
         renderer.render(usersController.get());
     }
 
@@ -82,6 +84,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
             final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
             new Thread(() -> {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.load(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
 
                 refreshElements();
@@ -102,6 +105,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
             final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
             new Thread(() -> {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.save(fileChooser.getSelectedFile().getAbsolutePath(), currentUser.get()));
 
                 disabler.revert();
@@ -130,6 +134,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
             final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
             new Thread(() -> {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.importObjects(new CsvLivingObjectReader(new CsvReaderWithHeader(
                         new CsvReader(scanner))).getObjects(), currentUser.get()));
 
@@ -176,11 +181,12 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
         final GuiDisabler<MainWindow> disabler = GuiDisabler.disable(mainWindow);
 
         new Thread(() -> {
-            renderer.render(collectionController
-                    .replaceElement(event.selectedElement, event.newElement, currentUser.get()));
+            renderer.setCurrentDialogWindow(event.window);
+            renderer.render(collectionController.replaceElement(event.selectedElement,
+                    event.newElement, currentUser.get()));
 
             refreshElements();
-            disabler.revert();
+            SwingUtilities.invokeLater(disabler::revert);
         }).start();
     }
 
@@ -197,22 +203,44 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
                 new Thread(() -> {
                     final Credentials credentials = new Credentials(userDialogEvent.username, new String(userDialogEvent.password));
+                    final Renderer.Listener rendererListener = new Renderer.Listener() {
 
-                    final View view = usersController.checkPassword(credentials);
-                    if (!(view instanceof CheckPasswordView) || !((CheckPasswordView) view).ok) {
-                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(event.window,
-                                "Wrong password or user is not exists"));
+                        @Override
+                        public void viewRendering(Renderer.Event rendererEvent) {
+                            if (rendererEvent.view.error != null) {
+                                return;
+                            }
 
-                        disabler.revert();
-                        return;
-                    }
+                            if (!(rendererEvent.view instanceof CheckPasswordView)) {
+                                return;
+                            }
 
-                    currentUser.set(credentials);
-                    previousUser = userDialogEvent.username;
-                    SwingUtilities.invokeLater(() -> {
-                        event.window.setCurrentUser(userDialogEvent.username);
-                        userDialogEvent.dialog.setVisible(false);
-                    });
+                            final CheckPasswordView checkPasswordView = (CheckPasswordView) rendererEvent.view;
+                            if (!checkPasswordView.ok) {
+                                return;
+                            }
+
+                            currentUser.set(credentials);
+                            previousUser = userDialogEvent.username;
+
+                            SwingUtilities.invokeLater(() -> {
+                                event.window.setCurrentUser(userDialogEvent.username);
+                                userDialogEvent.dialog.setVisible(false);
+                            });
+                        }
+
+                        @Override
+                        public void viewRendered(Renderer.Event e) {
+                            disabler.revert();
+                        }
+                    };
+
+                    final View checkPasswordView = usersController.checkPassword(credentials);
+                    renderer.addListener(rendererListener);
+                    renderer.setCurrentDialogWindow(event.window);
+                    renderer.render(checkPasswordView);
+
+                    renderer.removeListener(rendererListener);
                 }).start();
             }
 
@@ -234,7 +262,10 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
 
     @Override
     public void infoButtonClicked(MainWindow.Event event) {
-        new Thread(() -> renderer.render(collectionController.info())).start();
+        new Thread(() -> {
+            renderer.setCurrentDialogWindow(event.window);
+            renderer.render(collectionController.info());
+        }).start();
     }
 
     @Override
@@ -243,6 +274,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
             final LivingObject element = requestElement(event.window, "Add element", event.selectedElement);
 
             if (element != null) {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.add(element, currentUser.get()));
                 refreshElements();
             }
@@ -255,6 +287,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
             final LivingObject element = requestElement(event.window, "Remove element", event.selectedElement);
 
             if (element != null) {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.remove(element, currentUser.get()));
                 refreshElements();
             }
@@ -267,6 +300,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
             final LivingObject element = requestElement(event.window, "Remove lower elements", event.selectedElement);
 
             if (element != null) {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.removeLower(element, currentUser.get()));
                 refreshElements();
             }
@@ -279,6 +313,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
             final LivingObject element = requestElement(event.window, "Remove greater elements", event.selectedElement);
 
             if (element != null) {
+                renderer.setCurrentDialogWindow(event.window);
                 renderer.render(collectionController.removeGreater(element, currentUser.get()));
                 refreshElements();
             }
@@ -335,6 +370,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                     GuiDisabler.disable(dialogEvent.dialog);
 
                     new Thread(() -> {
+                        renderer.setCurrentDialogWindow(event.window);
                         renderer.render(usersController.changeUsername(event.selectedUser,
                                 dialogEvent.username, currentUser.get()));
 
@@ -367,6 +403,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                     GuiDisabler.disable(dialogEvent.dialog);
 
                     new Thread(() -> {
+                        renderer.setCurrentDialogWindow(event.window);
                         renderer.render(usersController.changePassword(event.selectedUser,
                                 new String(dialogEvent.password), currentUser.get()));
 
@@ -404,6 +441,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                                 final String permission = JOptionPane.showInputDialog(permissionsEvent.dialog, "Permission name: ");
 
                                 if (permission != null) {
+                                    renderer.setCurrentDialogWindow(event.window);
                                     renderer.render(usersController.givePermission(event.selectedUser,
                                             permission, currentUser.get()));
 
@@ -417,6 +455,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                             final GuiDisabler<PermissionsDialog> disabler = GuiDisabler.disable(permissionsEvent.dialog);
 
                             new Thread(() -> {
+                                renderer.setCurrentDialogWindow(event.window);
                                 renderer.render(usersController.takePermission(event.selectedUser,
                                         permissionsEvent.permission, currentUser.get()));
 
@@ -432,14 +471,33 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                         }
 
                         private void refreshPermissions(PermissionsDialog dialog) {
-                            final Set<String> permissions = usersController.getPermissions(event.selectedUser).permissions;
+                            final Renderer.Listener rendererListener = new Renderer.Adapter() {
 
-                            SwingUtilities.invokeLater(() -> {
-                                final GuiDisabler<PermissionsDialog> disabler = GuiDisabler.disable(dialog);
+                                @Override
+                                public void viewRendering(Renderer.Event rendererEvent) {
+                                    if (rendererEvent.view.error != null) {
+                                        return;
+                                    }
 
-                                dialog.setPermissions(permissions);
-                                disabler.revert();
-                            });
+                                    if (!(rendererEvent.view instanceof PermissionsView)) {
+                                        return;
+                                    }
+
+                                    SwingUtilities.invokeLater(() -> {
+                                        final GuiDisabler<PermissionsDialog> disabler = GuiDisabler.disable(dialog);
+
+                                        dialog.setPermissions(((PermissionsView) rendererEvent.view).permissions);
+                                        disabler.revert();
+                                    });
+                                }
+                            };
+
+                            final View permissionsView = usersController.getPermissions(event.selectedUser, currentUser.get());
+                            renderer.addListener(rendererListener);
+                            renderer.setCurrentDialogWindow(event.window);
+                            renderer.render(permissionsView);
+
+                            renderer.removeListener(rendererListener);
                         }
                     });
 
@@ -460,6 +518,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
                     GuiDisabler.disable(dialogEvent.dialog);
 
                     new Thread(() -> {
+                        renderer.setCurrentDialogWindow(event.window);
                         renderer.render(usersController.register(dialogEvent.username, dialogEvent.email, currentUser.get()));
                         refreshUsers();
 
@@ -483,6 +542,7 @@ public class GuiFrontend implements Frontend, MainWindow.Listener, UsersWindow.L
         SwingUtilities.invokeLater(() -> {
             if (JOptionPane.showConfirmDialog(usersWindow, "Are you sure? This action cannot be undone!") == JOptionPane.YES_OPTION) {
                 new Thread(() -> {
+                    renderer.setCurrentDialogWindow(event.window);
                     renderer.render(usersController.removeUser(event.selectedUser, currentUser.get()));
                     refreshUsers();
                 }).start();

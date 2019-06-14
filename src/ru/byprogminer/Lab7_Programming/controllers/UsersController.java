@@ -44,7 +44,11 @@ public class UsersController {
     }
 
     public UsersView get() {
-        return new UsersView(usersModel.get());
+        try {
+            return new UsersView(usersModel.get());
+        } catch (Throwable e) {
+            return new UsersView(errorMessage(e));
+        }
     }
 
     public View changeUsername(String username, Credentials credentials) {
@@ -154,8 +158,14 @@ public class UsersController {
         });
     }
 
-    public PermissionsView getPermissions(String username) {
-        return new PermissionsView(usersModel.getPermissions(username));
+    public View getPermissions(String username, Credentials credentials) {
+        return permissionTemplate(credentials, "users.getPermission.user." + username, () -> {
+            try {
+                return new PermissionsView(usersModel.getPermissions(username));
+            } catch (Throwable e) {
+                return new PermissionsView(errorMessage(e));
+            }
+        });
     }
 
     public View givePermission(String username, String permission, Credentials credentials) {

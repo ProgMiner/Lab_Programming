@@ -30,6 +30,27 @@ public class UsersWindow extends JFrame {
         void okButtonClicked(Event event);
     }
 
+    public static abstract class Adapter implements Listener {
+
+        @Override
+        public void changeUsernameButtonClicked(Event event) {}
+
+        @Override
+        public void changePasswordButtonClicked(Event event) {}
+
+        @Override
+        public void permissionsButtonClicked(Event event) {}
+
+        @Override
+        public void registerButtonClicked(Event event) {}
+
+        @Override
+        public void removeButtonClicked(Event event) {}
+
+        @Override
+        public void okButtonClicked(Event event) {}
+    }
+
     public static final class Event {
 
         public final UsersWindow window;

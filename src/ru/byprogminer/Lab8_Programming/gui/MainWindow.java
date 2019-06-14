@@ -48,6 +48,54 @@ public class MainWindow extends JFrame {
         void removeGreaterButtonClicked(Event event);
     }
 
+    public static abstract class Adapter implements Listener {
+
+        @Override
+        public void mainFileLoadMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainFileSaveMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainFileImportMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainFileUsersMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainFileExitMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainLanguageMenuItemClicked(Event event) {}
+
+        @Override
+        public void mainAboutMenuItemClicked(Event event) {}
+
+        @Override
+        public void elementChanged(Event event) {}
+
+        @Override
+        public void userNotLoggedLoginButtonClicked(Event event) {}
+
+        @Override
+        public void userLoggedInCurrentUserLogoutButtonClicked(Event event) {}
+
+        @Override
+        public void infoButtonClicked(Event event) {}
+
+        @Override
+        public void addButtonClicked(Event event) {}
+
+        @Override
+        public void removeButtonClicked(Event event) {}
+
+        @Override
+        public void removeLowerButtonClicked(Event event) {}
+
+        @Override
+        public void removeGreaterButtonClicked(Event event) {}
+    }
+
     public static class Event {
 
         public final MainWindow window;

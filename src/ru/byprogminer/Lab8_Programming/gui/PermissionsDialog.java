@@ -25,6 +25,18 @@ public class PermissionsDialog extends JDialog {
         void okButtonClicked(Event event);
     }
 
+    public static abstract class Adapter implements Listener {
+
+        @Override
+        public void addButtonClicked(Event event) {}
+
+        @Override
+        public void removeButtonClicked(Event event) {}
+
+        @Override
+        public void okButtonClicked(Event event) {}
+    }
+
     public static final class Event {
 
         public final PermissionsDialog dialog;

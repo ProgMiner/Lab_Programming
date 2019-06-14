@@ -258,7 +258,7 @@ public class DatabaseCollectionModel implements CollectionModel {
 
         private static final String REMOVE_NOBODY_OWNED = "" +
                 "DELETE FROM \"%1$s\" WHERE hash_code = ANY(?) AND\n" +
-                "    (SELECT COUNT(*) FROM \"%2$s\" WHERE hash_code = hash_code) = 0\n" +
+                "    (SELECT COUNT(*) FROM \"%2$s\" WHERE hash_code = \"%1$s\".hash_code) = 0\n" +
                 "RETURNING items";
 
         private static final String GET_LIVING_OBJECT_OWNER = "" +

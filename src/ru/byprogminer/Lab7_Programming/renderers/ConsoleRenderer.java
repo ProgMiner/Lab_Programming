@@ -1,13 +1,12 @@
 package ru.byprogminer.Lab7_Programming.renderers;
 
 import ru.byprogminer.Lab5_Programming.command.Console;
-import ru.byprogminer.Lab7_Programming.Renderer;
 import ru.byprogminer.Lab7_Programming.View;
 import ru.byprogminer.Lab7_Programming.views.*;
 
 import java.util.Objects;
 
-public class ConsoleRenderer implements Renderer {
+public class ConsoleRenderer extends AbstractRenderer {
 
     private final Console console;
 
@@ -15,7 +14,8 @@ public class ConsoleRenderer implements Renderer {
         this.console = Objects.requireNonNull(console);
     }
 
-    public void render(View view) {
+    @Override
+    protected void doRender(View view) {
         if (view.error != null) {
             console.printError(view.error + ". Please try again or consult a specialist");
         }

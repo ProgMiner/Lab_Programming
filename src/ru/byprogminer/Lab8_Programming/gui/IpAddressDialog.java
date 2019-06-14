@@ -23,6 +23,15 @@ public class IpAddressDialog extends JDialog {
         void cancelButtonClicked(Event event);
     }
 
+    public static abstract class Adapter implements Listener {
+
+        @Override
+        public void okButtonClicked(Event event) {}
+
+        @Override
+        public void cancelButtonClicked(Event event) {}
+    }
+
     public static final class Event {
 
         public final IpAddressDialog dialog;

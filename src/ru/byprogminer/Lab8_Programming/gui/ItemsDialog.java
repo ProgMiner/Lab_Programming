@@ -27,6 +27,15 @@ public class ItemsDialog extends JDialog {
         void cancelButtonClicked(Event event);
     }
 
+    public static abstract class Adapter implements Listener {
+
+        @Override
+        public void saveButtonClicked(Event event) {}
+
+        @Override
+        public void cancelButtonClicked(Event event) {}
+    }
+
     public static final class Event {
 
         public final ItemsDialog dialog;
